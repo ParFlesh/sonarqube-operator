@@ -1,0 +1,206 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "sonarsource.parflesh.github.io/v1alpha1",
+          "kind": "SonarQube",
+          "metadata": {
+            "name": "example-sonarqube"
+          },
+          "spec": {}
+        }
+      ]
+    capabilities: Basic Install
+  name: sonarqube-operator.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: SonarQube is the Schema for the sonarqubes API
+      kind: SonarQube
+      name: sonarqubes.sonarsource.parflesh.github.io
+      specDescriptors:
+      - description: 'Secret with database connection information (Required fields:
+          username, password, url)'
+        displayName: Database Secret
+        path: database
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:Secret
+      - description: Image of SonarQube to deploy
+        displayName: Image
+        path: image
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Storage Class Name
+        displayName: Storage Class Name
+        path: storage.class
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+        - urn:alm:descriptor:io.kubernetes:StorageClass
+      - description: Data Volume Size
+        displayName: Data Volume Size
+        path: storage.data
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Changes volume to Empty Dir causing storage to be empty at every
+          restart
+        displayName: Ephemeral
+        path: storage.ephemeral
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:checkbox
+      - description: Extensions Volume Size
+        displayName: Extensions Volume Size
+        path: storage.extensions
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Version of SonarQube image to deploy
+        displayName: Version
+        path: version
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      statusDescriptors:
+      - description: Status of pods
+        displayName: Pods
+        path: pods
+      version: v1alpha1
+  description: Placeholder description
+  displayName: Sonarqube Operator
+  icon:
+  - base64data: PHN2ZyB2aWV3Qm94PSIwIDAgMTQgMTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxLjQxNCI+PHBhdGggZD0iTTExLjkzOSAxMy4yODJoLS43NTZDMTEuMTgzIDcuMjAzIDYuMTY3IDIuMjU2IDAgMi4yNTZ2LS43NTVjNi41ODUgMCAxMS45MzkgNS4yODYgMTEuOTM5IDExLjc4MXptLjUyMi00LjA1M2MtLjkwNi0zLjgxNi0zLjk5Ny03LTcuODcyLTguMTExbC4xNzMtLjYwM2M0LjA5IDEuMTc0IDcuMzUzIDQuNTM4IDguMzExIDguNTdsLS42MTIuMTQ0em0uNTgxLTMuNTc1QTExLjU3MiAxMS41NzIgMCAwIDAgOC41NjIuNjQ4bC4yNjEtLjQzYTEyLjA4MSAxMi4wODEgMCAwIDEgNC42NzcgNS4yMmwtLjQ1OC4yMTZ6IiBmaWxsPSIjNGU5YmNkIiBmaWxsLXJ1bGU9Im5vbnplcm8iLz48L3N2Zz4=
+    mediatype: image/svg+xml
+  install:
+    spec:
+      deployments:
+      - name: sonarqube-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: sonarqube-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: sonarqube-operator
+            spec:
+              containers:
+              - command:
+                - sonarqube-operator
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: sonarqube-operator
+                image: quay.io/parflesh/sonarqube-operator:0.0.1
+                imagePullPolicy: Always
+                name: sonarqube-operator
+                resources: {}
+              serviceAccountName: sonarqube-operator
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - services/finalizers
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - apps
+          resourceNames:
+          - sonarqube-operator
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - replicasets
+          - deployments
+          verbs:
+          - get
+        - apiGroups:
+          - sonarsource.parflesh.github.io
+          resources:
+          - '*'
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        serviceAccountName: sonarqube-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - SonarQube
+  maintainers:
+  - email: parflesh@gmail.com
+    name: ParFlesh
+  maturity: alpha
+  provider:
+    name: ParFlesh
+  replaces: sonarqube-operator.v0.0.0
+  version: 0.0.1
