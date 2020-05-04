@@ -19,6 +19,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
+const (
+	ReconcileErrorFormat string = "reconcile: (%v)"
+)
+
 // TestSonarQubeController runs ReconcileSonarQube.Reconcile() against a
 // fake client that tracks a SonarQube object.
 func TestSonarQubeController(t *testing.T) {
@@ -62,7 +66,7 @@ func TestSonarQubeController(t *testing.T) {
 
 	res, err := r.Reconcile(req)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
 	if !res.Requeue {
@@ -71,7 +75,7 @@ func TestSonarQubeController(t *testing.T) {
 
 	res, err = r.Reconcile(req)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
 	if !res.Requeue {
@@ -79,7 +83,7 @@ func TestSonarQubeController(t *testing.T) {
 	}
 	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
 		t.Errorf("condition progressing not set")
@@ -89,12 +93,12 @@ func TestSonarQubeController(t *testing.T) {
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcile: secret not created")
 	} else if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 
 	res, err = r.Reconcile(req)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
 	if !res.Requeue {
@@ -102,7 +106,7 @@ func TestSonarQubeController(t *testing.T) {
 	}
 	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
 		t.Errorf("condition progressing not set")
@@ -112,12 +116,12 @@ func TestSonarQubeController(t *testing.T) {
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcile: service account not created")
 	} else if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 
 	res, err = r.Reconcile(req)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
 	if !res.Requeue {
@@ -125,7 +129,7 @@ func TestSonarQubeController(t *testing.T) {
 	}
 	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
 		t.Errorf("condition progressing not set")
@@ -135,12 +139,12 @@ func TestSonarQubeController(t *testing.T) {
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcile: service not created")
 	} else if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 
 	res, err = r.Reconcile(req)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
 	if !res.Requeue {
@@ -148,7 +152,7 @@ func TestSonarQubeController(t *testing.T) {
 	}
 	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
 		t.Errorf("condition progressing not set")
@@ -158,12 +162,12 @@ func TestSonarQubeController(t *testing.T) {
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcile: stateful set not created")
 	} else if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 
 	res, err = r.Reconcile(req)
 	if err != nil {
-		t.Fatalf("reconcile: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
 	if res.Requeue {
