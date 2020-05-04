@@ -12,13 +12,14 @@ import (
 	"strings"
 )
 
-// Reconciles secret for SonarQube
-// Returns secret if secret is in the expected state
+// Reconciles Secret for SonarQube
+// Returns: Secret, Error
+// If Error is non-nil, Service is not in expected state
 // Errors:
-// ErrorReasonSpecUpdate: returned when spec does not have secret name
-// ErrorReasonResourceCreated: returned when secret does not exists
-// ErrorReasonResourceUpdate: returned when secret was updated to meet expected state
-// ErrorReasonUnknown: returned when unhandled error from client occurs
+//   ErrorReasonSpecUpdate: returned when spec does not have secret name
+//   ErrorReasonResourceCreated: returned when secret does not exists
+//   ErrorReasonResourceUpdate: returned when secret was updated to meet expected state
+//   ErrorReasonUnknown: returned when unhandled error from client occurs
 func (r *ReconcileSonarQube) ReconcileSecret(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Secret, error) {
 	foundSecret, err := r.findSecret(cr)
 	if err != nil {

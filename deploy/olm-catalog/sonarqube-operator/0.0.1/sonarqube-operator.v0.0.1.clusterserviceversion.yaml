@@ -10,7 +10,11 @@ metadata:
           "metadata": {
             "name": "example-sonarqube"
           },
-          "spec": {}
+          "spec": {
+            "node": {
+              "replicas": 1
+            }
+          }
         }
       ]
     capabilities: Basic Install
@@ -24,55 +28,164 @@ spec:
       kind: SonarQube
       name: sonarqubes.sonarsource.parflesh.github.io
       specDescriptors:
-      - description: 'Secret with database connection information (Required fields:
-          username, password, url)'
-        displayName: Database Secret
-        path: database
+      - description: The name of a higher level application this instance is part
+          of
+        displayName: Application
+        path: application
         x-descriptors:
-        - urn:alm:descriptor:io.kubernetes:Secret
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Run SonarQube as a cluster
+        displayName: Clustered
+        path: clustered
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
       - description: Image of SonarQube to deploy
         displayName: Image
         path: image
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Node Affinity
+        displayName: Node Affinity
+        path: node.nodeAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
+      - description: Node selector
+        displayName: Node Selector
+        path: node.nodeSelector
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:selector:Node
+      - description: Pod Affinity
+        displayName: Pod Affinity
+        path: node.podAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAffinity
+      - description: Pod AntiAffinity
+        displayName: Pod AntiAffinity
+        path: node.podAntiAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
+      - description: Priority Class Name
+        displayName: Priority Class
+        path: node.priorityClass
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Application Node replicas (Only greater than 1 if clustered enabled)
+          (If set to 0, application and search nodes will be shutdown)
+        displayName: Node Replicas
+        path: node.replicas
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
+        - urn:alm:descriptor:com.tectonic.ui:number
       - description: Storage Class Name
         displayName: Storage Class Name
-        path: storage.class
+        path: node.storage.class
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.storage
         - urn:alm:descriptor:io.kubernetes:StorageClass
       - description: Data Volume Size
         displayName: Data Volume Size
-        path: storage.data
+        path: node.storage.data
         x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.storage
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Changes volume to Empty Dir causing storage to be empty at every
-          restart
-        displayName: Ephemeral
-        path: storage.ephemeral
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:checkbox
       - description: Extensions Volume Size
         displayName: Extensions Volume Size
-        path: storage.extensions
+        path: node.storage.extensions
         x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.storage
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Node Affinity
+        displayName: Node Affinity
+        path: nodeSearch.nodeAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
+        - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
+      - description: Node selector
+        displayName: Node Selector
+        path: nodeSearch.nodeSelector
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
+        - urn:alm:descriptor:com.tectonic.ui:selector:Node
+      - description: Pod Affinity
+        displayName: Pod Affinity
+        path: nodeSearch.podAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAffinity
+      - description: Pod AntiAffinity
+        displayName: Pod AntiAffinity
+        path: nodeSearch.podAntiAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
+      - description: Priority Class Name
+        displayName: Priority Class
+        path: nodeSearch.priorityClass
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Storage Class Name
+        displayName: Storage Class Name
+        path: nodeSearch.storage.class
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.storage
+        - urn:alm:descriptor:io.kubernetes:StorageClass
+      - description: Data Volume Size
+        displayName: Data Volume Size
+        path: nodeSearch.storage.data
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.storage
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Extensions Volume Size
+        displayName: Extensions Volume Size
+        path: nodeSearch.storage.extensions
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.storage
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: 'Secret with sonar configuration each key will be added as environment
+          variables into Sonar Container. (More Information: https://docs.sonarqube.org/latest/setup/environment-variables/)'
+        displayName: Secret
+        path: secret
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
+        - urn:alm:descriptor:io.kubernetes:Secret
       - description: Version of SonarQube image to deploy
         displayName: Version
         path: version
         x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
         - urn:alm:descriptor:com.tectonic.ui:text
       statusDescriptors:
       - description: Status of pods
         displayName: Pods
         path: pods
+      - description: Status of search pods
+        displayName: Search Pods
+        path: searchPods
       version: v1alpha1
   description: Placeholder description
   displayName: Sonarqube Operator
   icon:
-  - base64data: PHN2ZyB2aWV3Qm94PSIwIDAgMTQgMTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIxLjQxNCI+PHBhdGggZD0iTTExLjkzOSAxMy4yODJoLS43NTZDMTEuMTgzIDcuMjAzIDYuMTY3IDIuMjU2IDAgMi4yNTZ2LS43NTVjNi41ODUgMCAxMS45MzkgNS4yODYgMTEuOTM5IDExLjc4MXptLjUyMi00LjA1M2MtLjkwNi0zLjgxNi0zLjk5Ny03LTcuODcyLTguMTExbC4xNzMtLjYwM2M0LjA5IDEuMTc0IDcuMzUzIDQuNTM4IDguMzExIDguNTdsLS42MTIuMTQ0em0uNTgxLTMuNTc1QTExLjU3MiAxMS41NzIgMCAwIDAgOC41NjIuNjQ4bC4yNjEtLjQzYTEyLjA4MSAxMi4wODEgMCAwIDEgNC42NzcgNS4yMmwtLjQ1OC4yMTZ6IiBmaWxsPSIjNGU5YmNkIiBmaWxsLXJ1bGU9Im5vbnplcm8iLz48L3N2Zz4=
-    mediatype: image/svg+xml
+  - base64data: ""
+    mediatype: ""
   install:
     spec:
       deployments:
@@ -202,5 +315,4 @@ spec:
   maturity: alpha
   provider:
     name: ParFlesh
-  replaces: sonarqube-operator.v0.0.0
   version: 0.0.1

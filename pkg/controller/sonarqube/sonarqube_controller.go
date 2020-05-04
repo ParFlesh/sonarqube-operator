@@ -3,6 +3,7 @@ package sonarqube
 import (
 	"context"
 	"fmt"
+	"github.com/parflesh/sonarqube-operator/version"
 	"k8s.io/apimachinery/pkg/types"
 	"strings"
 
@@ -154,7 +155,17 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return r.ParseErrorForReconcileResult(instance, err)
 	}
 
-	_, err = r.ReconcileService(instance)
+	_, err = r.ReconcileServiceAccount(instance)
+	if err != nil {
+		return r.ParseErrorForReconcileResult(instance, err)
+	}
+
+	_, err = r.ReconcileAppService(instance)
+	if err != nil {
+		return r.ParseErrorForReconcileResult(instance, err)
+	}
+
+	_, err = r.ReconcileAppStatefulSet(instance)
 	if err != nil {
 		return r.ParseErrorForReconcileResult(instance, err)
 	}
@@ -168,5 +179,16 @@ func (r *ReconcileSonarQube) Labels(cr *sonarsourcev1alpha1.SonarQube) map[strin
 		labels[k] = v
 	}
 	labels[fmt.Sprintf("%s.%s", cr.GroupVersionKind().Kind, cr.GroupVersionKind().Group)] = cr.Name
+	labels["app.kubernetes.io/name"] = "SonarQube"
+	labels["app.kubernetes.io/instance"] = cr.Name
+	labels["app.kubernetes.io/version"] = cr.Status.RevisionHash
+	labels["app.kubernetes.io/managed-by"] = fmt.Sprintf("sonarqube-operator.v%s", version.Version)
+
+	if cr.Spec.Application != "" {
+		labels["app.kubernetes.io/part-of"] = cr.Spec.Application
+	} else {
+		labels["app.kubernetes.io/part-of"] = cr.Name
+	}
+
 	return labels
 }

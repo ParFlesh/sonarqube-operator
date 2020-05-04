@@ -14,9 +14,9 @@ import (
 	"testing"
 )
 
-// TestSonarQubeService runs ReconcileSonarQube.ReconcileAppService() against a
+// TestSonarQubeServiceAccount runs ReconcileSonarQube.ReconcileAppServiceAccount() against a
 // fake client
-func TestSonarQubeService(t *testing.T) {
+func TestSonarQubeServiceAccount(t *testing.T) {
 	// Set the logger to development mode for verbose logs.
 	logf.SetLogger(logf.ZapLogger(true))
 
@@ -46,20 +46,20 @@ func TestSonarQubeService(t *testing.T) {
 	// Create a ReconcileSonarQube object with the scheme and fake client.
 	r := &ReconcileSonarQube{client: cl, scheme: s}
 
-	_, err := r.ReconcileAppService(sonarqube)
+	_, err := r.ReconcileServiceAccount(sonarqube)
 	if ReasonForError(err) != ErrorReasonResourceCreated {
-		t.Error("reconcileService: resource created error not thrown when creating Service")
+		t.Error("reconcileServiceAccount: resource created error not thrown when creating ServiceAccount")
 	}
-	Service := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: sonarqube.Namespace}, Service)
+	ServiceAccount := &corev1.ServiceAccount{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: sonarqube.Namespace}, ServiceAccount)
 	if err != nil && errors.IsNotFound(err) {
-		t.Error("reconcileService: Service not created")
+		t.Error("reconcileServiceAccount: ServiceAccount not created")
 	} else if err != nil {
-		t.Fatalf("reconcileService: (%v)", err)
+		t.Fatalf("reconcileServiceAccount: (%v)", err)
 	}
 
-	Service, err = r.ReconcileAppService(sonarqube)
+	ServiceAccount, err = r.ReconcileServiceAccount(sonarqube)
 	if err != nil {
-		t.Error("reconcileService: returned error even though Service is in expected state")
+		t.Error("reconcileServiceAccount: returned error even though ServiceAccount is in expected state")
 	}
 }

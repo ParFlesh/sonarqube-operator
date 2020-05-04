@@ -2,8 +2,9 @@ package sonarqube
 
 import (
 	"context"
+	"fmt"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,9 +15,9 @@ import (
 	"testing"
 )
 
-// TestSonarQubeService runs ReconcileSonarQube.ReconcileAppService() against a
+// TestSonarQubeStatefulSet runs ReconcileSonarQube.ReconcileAppStatefulSet() against a
 // fake client
-func TestSonarQubeService(t *testing.T) {
+func TestSonarQubeAppStatefulSet(t *testing.T) {
 	// Set the logger to development mode for verbose logs.
 	logf.SetLogger(logf.ZapLogger(true))
 
@@ -31,7 +32,9 @@ func TestSonarQubeService(t *testing.T) {
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: sonarsourcev1alpha1.SonarQubeSpec{},
+		Spec: sonarsourcev1alpha1.SonarQubeSpec{
+			Secret: "test",
+		},
 	}
 	// Objects to track in the fake client.
 	objs := []runtime.Object{
@@ -46,20 +49,27 @@ func TestSonarQubeService(t *testing.T) {
 	// Create a ReconcileSonarQube object with the scheme and fake client.
 	r := &ReconcileSonarQube{client: cl, scheme: s}
 
-	_, err := r.ReconcileAppService(sonarqube)
-	if ReasonForError(err) != ErrorReasonResourceCreated {
-		t.Error("reconcileService: resource created error not thrown when creating Service")
-	}
-	Service := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: sonarqube.Namespace}, Service)
-	if err != nil && errors.IsNotFound(err) {
-		t.Error("reconcileService: Service not created")
-	} else if err != nil {
-		t.Fatalf("reconcileService: (%v)", err)
+	for i := 0; i < 3; i++ {
+		_, err := r.ReconcileAppStatefulSet(sonarqube)
+		if ReasonForError(err) != ErrorReasonResourceCreated {
+			t.Error("reconcileStatefulSet: resource created error not thrown when creating StatefulSet")
+		}
 	}
 
-	Service, err = r.ReconcileAppService(sonarqube)
+	_, err := r.ReconcileAppStatefulSet(sonarqube)
+	if ReasonForError(err) != ErrorReasonResourceCreated {
+		t.Error("reconcileStatefulSet: resource created error not thrown when creating StatefulSet")
+	}
+	statefulSet := &appsv1.StatefulSet{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-app", sonarqube.Name), Namespace: sonarqube.Namespace}, statefulSet)
+	if err != nil && errors.IsNotFound(err) {
+		t.Error("reconcileStatefulSet: StatefulSet not created")
+	} else if err != nil {
+		t.Fatalf("reconcileStatefulSet: (%v)", err)
+	}
+
+	statefulSet, err = r.ReconcileAppStatefulSet(sonarqube)
 	if err != nil {
-		t.Error("reconcileService: returned error even though Service is in expected state")
+		t.Error("reconcileStatefulSet: returned error even though StatefulSet is in expected state")
 	}
 }

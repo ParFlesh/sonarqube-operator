@@ -11,10 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const (
-	ApplicationPort int32 = 9000
-)
-
 // Reconciles Service for SonarQube
 // Returns: Service, Error
 // If Error is non-nil, Service is not in expected state
@@ -22,8 +18,8 @@ const (
 //   ErrorReasonResourceCreated: returned when Service does not exists
 //   ErrorReasonResourceUpdate: returned when Service was updated to meet expected state
 //   ErrorReasonUnknown: returned when unhandled error from client occurs
-func (r *ReconcileSonarQube) ReconcileAppService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
-	foundService, err := r.findAppService(cr)
+func (r *ReconcileSonarQube) ReconcileServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
+	foundService, err := r.findServiceAccount(cr)
 	if err != nil {
 		return foundService, err
 	}
@@ -31,14 +27,14 @@ func (r *ReconcileSonarQube) ReconcileAppService(cr *sonarsourcev1alpha1.SonarQu
 	return foundService, nil
 }
 
-func (r *ReconcileSonarQube) findAppService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
-	newService, err := r.newAppService(cr)
+func (r *ReconcileSonarQube) findServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
+	newService, err := r.newServiceAccount(cr)
 	if err != nil {
 		return newService, err
 	}
 
-	foundService := &corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: newService.Name, Namespace: newService.Namespace}, foundService)
+	foundServiceAccount := &corev1.ServiceAccount{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: newService.Name, Namespace: newService.Namespace}, foundServiceAccount)
 	if err != nil && errors.IsNotFound(err) {
 		err := r.client.Create(context.TODO(), newService)
 		if err != nil {
@@ -52,29 +48,18 @@ func (r *ReconcileSonarQube) findAppService(cr *sonarsourcev1alpha1.SonarQube) (
 		return newService, err
 	}
 
-	return foundService, nil
+	return foundServiceAccount, nil
 }
 
-func (r *ReconcileSonarQube) newAppService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
+func (r *ReconcileSonarQube) newServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
 	labels := r.Labels(cr)
 	labels["app.kubernetes.io/component"] = "application"
 
-	dep := &corev1.Service{
+	dep := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cr.Namespace,
 			Name:      cr.Name,
 			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: labels,
-			Type:     corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "http",
-					Protocol: corev1.ProtocolTCP,
-					Port:     ApplicationPort,
-				},
-			},
 		},
 	}
 

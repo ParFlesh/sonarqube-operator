@@ -2,6 +2,8 @@ package sonarqube
 
 import (
 	"context"
+	"fmt"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"testing"
@@ -105,10 +107,56 @@ func TestSonarQubeController(t *testing.T) {
 	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
 		t.Errorf("condition progressing not set")
 	}
+	serviceAccount := &corev1.ServiceAccount{}
+	err = r.client.Get(context.TODO(), req.NamespacedName, serviceAccount)
+	if err != nil && errors.IsNotFound(err) {
+		t.Error("reconcile: service account not created")
+	} else if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		t.Errorf("condition progressing not set")
+	}
 	service := &corev1.Service{}
 	err = r.client.Get(context.TODO(), req.NamespacedName, service)
 	if err != nil && errors.IsNotFound(err) {
-		t.Error("reconcile: secret not created")
+		t.Error("reconcile: service not created")
+	} else if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf("reconcile: (%v)", err)
+	}
+	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		t.Errorf("condition progressing not set")
+	}
+	statefulSet := &appsv1.StatefulSet{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-app", name), Namespace: namespace}, statefulSet)
+	if err != nil && errors.IsNotFound(err) {
+		t.Error("reconcile: stateful set not created")
 	} else if err != nil {
 		t.Fatalf("reconcile: (%v)", err)
 	}

@@ -2,4 +2,6 @@ apiVersion: sonarsource.parflesh.github.io/v1alpha1
 kind: SonarQube
 metadata:
   name: example-sonarqube
-spec: {}
+spec:
+  node:
+    replicas: 1
