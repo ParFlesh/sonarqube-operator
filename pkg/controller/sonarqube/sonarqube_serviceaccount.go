@@ -15,7 +15,7 @@ import (
 // Returns: Service, Error
 // If Error is non-nil, Service is not in expected state
 // Errors:
-//   ErrorReasonResourceCreated: returned when Service does not exists
+//   ErrorReasonResourceCreate: returned when Service does not exists
 //   ErrorReasonResourceUpdate: returned when Service was updated to meet expected state
 //   ErrorReasonUnknown: returned when unhandled error from client occurs
 func (r *ReconcileSonarQube) ReconcileServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
@@ -41,7 +41,7 @@ func (r *ReconcileSonarQube) findServiceAccount(cr *sonarsourcev1alpha1.SonarQub
 			return newService, err
 		}
 		return newService, &Error{
-			reason:  ErrorReasonResourceCreated,
+			reason:  ErrorReasonResourceCreate,
 			message: fmt.Sprintf("created Service %s", newService.Name),
 		}
 	} else if err != nil {

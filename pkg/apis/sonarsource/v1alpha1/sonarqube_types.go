@@ -36,8 +36,10 @@ type SonarQubeSpec struct {
 	// (More Information: https://docs.sonarqube.org/latest/setup/environment-variables/)
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Secret"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:Secret,urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance"
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:Secret"
 	Secret string `json:"secret,omitempty"`
 
 	// Run SonarQube as a cluster
@@ -212,20 +214,25 @@ type SonarQubeStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	Conditions status.Conditions `json:"conditions,omitempty"`
 
-	// Status of pods
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Pod Statuses"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:podStatuses"
+	// Kubernetes service that can be used to expose SonarQube
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.displayName="Service"
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:Service"
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
-	Pods PodStatuses `json:"pods,omitempty"`
+	Service string `json:"service,omitempty"`
+
+	// Status of pods
+	// +optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.displayName="Pod Statuses"
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:podStatuses"
+	Pods PodStatuses `json:"pods"`
 
 	// Status of search pods
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Pod Statuses"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:podStatuses"
+	// +optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.displayName="Search Pod Statuses"
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:podStatuses"
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
-	SearchPods PodStatuses `json:"searchPods,omitempty"`
-
-	// Pod Count
-	Size int32 `json:"size,omitempty"`
+	SearchPods PodStatuses `json:"searchPods"`
 
 	// Status of instance
 	Phase status.ConditionType `json:"phase,omitempty"`
@@ -238,7 +245,7 @@ type SonarQubeStatus struct {
 	Revision int32 `json:"revision,omitempty"`
 
 	// Hash of latest spec & controller version for revision tracking
-	RevisionHash string `json:"revisionHas,omitempty"`
+	RevisionHash string `json:"revisionHash,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -65,7 +65,7 @@ func TestSonarQubeSecret(t *testing.T) {
 	}
 
 	_, err = r.ReconcileSecret(sonarqube)
-	if ReasonForError(err) != ErrorReasonResourceCreated {
+	if ReasonForError(err) != ErrorReasonResourceCreate {
 		t.Error("reconcileSecret: resource created error not thrown when creating secret")
 	}
 	secret := &corev1.Secret{}

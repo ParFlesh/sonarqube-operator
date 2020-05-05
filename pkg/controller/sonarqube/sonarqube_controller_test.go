@@ -154,6 +154,54 @@ func TestSonarQubeController(t *testing.T) {
 	if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}
+	if sonarqube.Spec.Node.Storage.Data == "" {
+		t.Error("node data size not set to default")
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarqube.Spec.Node.Storage.Extensions == "" {
+		t.Error("node extensions size not set to default")
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarqube.Spec.Image == "" {
+		t.Error("image not set to default")
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
 	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
 		t.Errorf("condition progressing not set")
 	}

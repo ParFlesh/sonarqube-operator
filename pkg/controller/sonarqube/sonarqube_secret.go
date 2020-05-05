@@ -17,7 +17,7 @@ import (
 // If Error is non-nil, Service is not in expected state
 // Errors:
 //   ErrorReasonSpecUpdate: returned when spec does not have secret name
-//   ErrorReasonResourceCreated: returned when secret does not exists
+//   ErrorReasonResourceCreate: returned when secret does not exists
 //   ErrorReasonResourceUpdate: returned when secret was updated to meet expected state
 //   ErrorReasonUnknown: returned when unhandled error from client occurs
 func (r *ReconcileSonarQube) ReconcileSecret(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Secret, error) {
@@ -71,7 +71,7 @@ func (r *ReconcileSonarQube) findSecret(cr *sonarsourcev1alpha1.SonarQube) (*cor
 			return newSecret, err
 		}
 		return newSecret, &Error{
-			reason:  ErrorReasonResourceCreated,
+			reason:  ErrorReasonResourceCreate,
 			message: fmt.Sprintf("created secret %s", newSecret.Name),
 		}
 	} else if err != nil {

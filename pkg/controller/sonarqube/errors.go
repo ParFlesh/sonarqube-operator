@@ -7,10 +7,10 @@ import (
 type ErrorReason string
 
 const (
-	ErrorReasonSpecUpdate      ErrorReason = "SpecUpdate"
-	ErrorReasonResourceCreated ErrorReason = "ResourceCreated"
-	ErrorReasonResourceUpdate  ErrorReason = "ResourceUpdated"
-	ErrorReasonUnknown         ErrorReason = "Unknown"
+	ErrorReasonSpecUpdate     ErrorReason = "SpecUpdate"
+	ErrorReasonResourceCreate ErrorReason = "ResourceCreate"
+	ErrorReasonResourceUpdate ErrorReason = "ResourceUpdate"
+	ErrorReasonUnknown        ErrorReason = "Unknown"
 )
 
 type SQError interface {

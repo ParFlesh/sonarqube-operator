@@ -11,24 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
-// Reconciles StatefulSet for SonarQube
-// Returns: StatefulSet, Error
-// If Error is non-nil, StatefulSet is not in expected state
-// Errors:
-//   ErrorReasonResourceCreated: returned when StatefulSet does not exists
-//   ErrorReasonResourceUpdate: returned when StatefulSet was updated to meet expected state
-//   ErrorReasonUnknown: returned when unhandled error from client occurs
-func (r *ReconcileSonarQube) ReconcileAppStatefulSet(cr *sonarsourcev1alpha1.SonarQube) (*appsv1.StatefulSet, error) {
-	foundStatefulSet, err := r.findAppStatefulSet(cr)
-	if err != nil {
-		return foundStatefulSet, err
-	}
-
-	return foundStatefulSet, nil
-}
 
 const (
 	PodGracePeriod       int64  = 3600
@@ -37,6 +22,36 @@ const (
 	VolumePathTemp       string = "/opt/sonarqube/temp"
 	VolumePathExtensions string = "/opt/sonarqube/extensions"
 )
+
+// Reconciles StatefulSet for SonarQube
+// Returns: StatefulSet, Error
+// If Error is non-nil, StatefulSet is not in expected state
+// Errors:
+//   ErrorReasonResourceCreate: returned when StatefulSet does not exists
+//   ErrorReasonResourceUpdate: returned when StatefulSet was updated to meet expected state
+//   ErrorReasonUnknown: returned when unhandled error from client occurs
+func (r *ReconcileSonarQube) ReconcileAppStatefulSet(cr *sonarsourcev1alpha1.SonarQube) (*appsv1.StatefulSet, error) {
+	statefulSet, err := r.findAppStatefulSet(cr)
+	if err != nil {
+		return statefulSet, err
+	}
+
+	newStatus := cr.Status
+
+	podList := &corev1.PodList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(cr.Namespace),
+		client.MatchingLabels(statefulSet.Spec.Selector.MatchLabels),
+	}
+	err = r.client.List(context.TODO(), podList, listOpts...)
+	if err != nil {
+		return statefulSet, err
+	}
+	newStatus.Pods = getPodStatuses(podList.Items)
+
+	r.updateStatus(&newStatus, cr)
+	return statefulSet, nil
+}
 
 func (r *ReconcileSonarQube) findAppStatefulSet(cr *sonarsourcev1alpha1.SonarQube) (*appsv1.StatefulSet, error) {
 	newStatefulSet, err := r.newAppStatefulSet(cr)
@@ -52,8 +67,8 @@ func (r *ReconcileSonarQube) findAppStatefulSet(cr *sonarsourcev1alpha1.SonarQub
 			return newStatefulSet, err
 		}
 		return newStatefulSet, &Error{
-			reason:  ErrorReasonResourceCreated,
-			message: fmt.Sprintf("created StatefulSet %s", newStatefulSet.Name),
+			reason:  ErrorReasonResourceCreate,
+			message: fmt.Sprintf("create StatefulSet %s", newStatefulSet.Name),
 		}
 	} else if err != nil {
 		return newStatefulSet, err
@@ -71,21 +86,48 @@ func (r *ReconcileSonarQube) newAppStatefulSet(cr *sonarsourcev1alpha1.SonarQube
 		return &appsv1.StatefulSet{}, err
 	}
 
+	if cr.Spec.Node.Storage.Data == "" {
+		cr.Spec.Node.Storage.Data = DefaultVolumeSize
+		err := r.client.Update(context.TODO(), cr)
+		if err != nil {
+			return &appsv1.StatefulSet{}, err
+		}
+		return &appsv1.StatefulSet{}, &Error{
+			reason:  ErrorReasonSpecUpdate,
+			message: "updated node data storage",
+		}
+	}
+
+	if cr.Spec.Node.Storage.Extensions == "" {
+		cr.Spec.Node.Storage.Extensions = DefaultVolumeSize
+		err := r.client.Update(context.TODO(), cr)
+		if err != nil {
+			return &appsv1.StatefulSet{}, err
+		}
+		return &appsv1.StatefulSet{}, &Error{
+			reason:  ErrorReasonSpecUpdate,
+			message: "updated node extension storage",
+		}
+	}
+
+	if cr.Spec.Image == "" {
+		cr.Spec.Image = DefaultImage
+		err := r.client.Update(context.TODO(), cr)
+		if err != nil {
+			return &appsv1.StatefulSet{}, err
+		}
+		return &appsv1.StatefulSet{}, &Error{
+			reason:  ErrorReasonSpecUpdate,
+			message: "updated image",
+		}
+	}
+
 	var dataVolumeRequest, extensionsVolumeRequest resource.Quantity
-	if cr.Spec.Node.Storage.Data != "" {
-		if dataVolumeRequest, err = resource.ParseQuantity(cr.Spec.Node.Storage.Data); err != nil {
-			return &appsv1.StatefulSet{}, err
-		}
-		if extensionsVolumeRequest, err = resource.ParseQuantity(cr.Spec.Node.Storage.Extensions); err != nil {
-			return &appsv1.StatefulSet{}, err
-		}
-	} else {
-		if dataVolumeRequest, err = resource.ParseQuantity(DefaultVolumeSize); err != nil {
-			return &appsv1.StatefulSet{}, err
-		}
-		if extensionsVolumeRequest, err = resource.ParseQuantity(DefaultVolumeSize); err != nil {
-			return &appsv1.StatefulSet{}, err
-		}
+	if dataVolumeRequest, err = resource.ParseQuantity(cr.Spec.Node.Storage.Data); err != nil {
+		return &appsv1.StatefulSet{}, err
+	}
+	if extensionsVolumeRequest, err = resource.ParseQuantity(cr.Spec.Node.Storage.Extensions); err != nil {
+		return &appsv1.StatefulSet{}, err
 	}
 
 	sqImage := r.getImage(cr)

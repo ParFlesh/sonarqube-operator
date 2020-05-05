@@ -51,13 +51,20 @@ func TestSonarQubeAppStatefulSet(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		_, err := r.ReconcileAppStatefulSet(sonarqube)
-		if ReasonForError(err) != ErrorReasonResourceCreated {
+		if ReasonForError(err) != ErrorReasonResourceCreate {
+			t.Error("reconcileStatefulSet: resource created error not thrown when creating StatefulSet")
+		}
+	}
+
+	for i := 0; i < 3; i++ {
+		_, err := r.ReconcileAppStatefulSet(sonarqube)
+		if ReasonForError(err) != ErrorReasonSpecUpdate {
 			t.Error("reconcileStatefulSet: resource created error not thrown when creating StatefulSet")
 		}
 	}
 
 	_, err := r.ReconcileAppStatefulSet(sonarqube)
-	if ReasonForError(err) != ErrorReasonResourceCreated {
+	if ReasonForError(err) != ErrorReasonResourceCreate {
 		t.Error("reconcileStatefulSet: resource created error not thrown when creating StatefulSet")
 	}
 	statefulSet := &appsv1.StatefulSet{}

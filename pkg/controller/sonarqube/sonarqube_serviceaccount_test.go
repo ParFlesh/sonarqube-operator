@@ -47,7 +47,7 @@ func TestSonarQubeServiceAccount(t *testing.T) {
 	r := &ReconcileSonarQube{client: cl, scheme: s}
 
 	_, err := r.ReconcileServiceAccount(sonarqube)
-	if ReasonForError(err) != ErrorReasonResourceCreated {
+	if ReasonForError(err) != ErrorReasonResourceCreate {
 		t.Error("reconcileServiceAccount: resource created error not thrown when creating ServiceAccount")
 	}
 	ServiceAccount := &corev1.ServiceAccount{}

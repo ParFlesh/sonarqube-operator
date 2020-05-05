@@ -19,16 +19,22 @@ const (
 // Returns: Service, Error
 // If Error is non-nil, Service is not in expected state
 // Errors:
-//   ErrorReasonResourceCreated: returned when Service does not exists
+//   ErrorReasonResourceCreate: returned when Service does not exists
 //   ErrorReasonResourceUpdate: returned when Service was updated to meet expected state
 //   ErrorReasonUnknown: returned when unhandled error from client occurs
 func (r *ReconcileSonarQube) ReconcileAppService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
-	foundService, err := r.findAppService(cr)
+	service, err := r.findAppService(cr)
 	if err != nil {
-		return foundService, err
+		return service, err
 	}
 
-	return foundService, nil
+	newStatus := cr.Status
+
+	newStatus.Service = service.Name
+
+	r.updateStatus(&newStatus, cr)
+
+	return service, nil
 }
 
 func (r *ReconcileSonarQube) findAppService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
@@ -45,7 +51,7 @@ func (r *ReconcileSonarQube) findAppService(cr *sonarsourcev1alpha1.SonarQube) (
 			return newService, err
 		}
 		return newService, &Error{
-			reason:  ErrorReasonResourceCreated,
+			reason:  ErrorReasonResourceCreate,
 			message: fmt.Sprintf("created Service %s", newService.Name),
 		}
 	} else if err != nil {

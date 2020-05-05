@@ -1333,7 +1333,7 @@ spec:
                 is a change to spec or controller version
               format: int32
               type: integer
-            revisionHas:
+            revisionHash:
               description: Hash of latest spec & controller version for revision tracking
               type: string
             searchPods:
@@ -1343,10 +1343,9 @@ spec:
                 type: array
               description: Status of search pods
               type: object
-            size:
-              description: Pod Count
-              format: int32
-              type: integer
+            service:
+              description: Kubernetes service that can be used to expose SonarQube
+              type: string
           type: object
       type: object
   version: v1alpha1

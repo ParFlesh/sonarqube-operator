@@ -150,6 +150,15 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	newStatus := instance.Status
+	if newStatus.Pods == nil {
+		newStatus.Pods = make(sonarsourcev1alpha1.PodStatuses)
+	}
+	if newStatus.SearchPods == nil {
+		newStatus.SearchPods = make(sonarsourcev1alpha1.PodStatuses)
+	}
+	r.updateStatus(&newStatus, instance)
+
 	_, err = r.ReconcileSecret(instance)
 	if err != nil {
 		return r.ParseErrorForReconcileResult(instance, err)

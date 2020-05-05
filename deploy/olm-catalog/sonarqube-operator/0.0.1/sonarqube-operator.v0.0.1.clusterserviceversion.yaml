@@ -175,11 +175,20 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       statusDescriptors:
       - description: Status of pods
-        displayName: Pods
+        displayName: Pod Statuses
         path: pods
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:podStatuses
       - description: Status of search pods
-        displayName: Search Pods
+        displayName: Search Pod Statuses
         path: searchPods
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:podStatuses
+      - description: Kubernetes service that can be used to expose SonarQube
+        displayName: Service
+        path: service
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:Service
       version: v1alpha1
   description: Placeholder description
   displayName: Sonarqube Operator
