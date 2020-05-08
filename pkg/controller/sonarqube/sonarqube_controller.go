@@ -3,6 +3,7 @@ package sonarqube
 import (
 	"context"
 	"fmt"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/parflesh/sonarqube-operator/version"
 	"k8s.io/apimachinery/pkg/types"
 	"strings"
@@ -150,14 +151,15 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	newStatus := instance.Status
+	newStatus := &sonarsourcev1alpha1.SonarQubeStatus{}
+	*newStatus = instance.Status
 	if newStatus.Pods == nil {
 		newStatus.Pods = make(sonarsourcev1alpha1.PodStatuses)
 	}
 	if newStatus.SearchPods == nil {
 		newStatus.SearchPods = make(sonarsourcev1alpha1.PodStatuses)
 	}
-	r.updateStatus(&newStatus, instance)
+	r.updateStatus(newStatus, instance)
 
 	_, err = r.ReconcileSecret(instance)
 	if err != nil {
@@ -178,6 +180,21 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 	if err != nil {
 		return r.ParseErrorForReconcileResult(instance, err)
 	}
+
+	if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		newStatus.Conditions.SetCondition(status.Condition{
+			Type:   sonarsourcev1alpha1.ConditionProgressing,
+			Status: corev1.ConditionFalse,
+		})
+	}
+
+	if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionPending) {
+		newStatus.Conditions.SetCondition(status.Condition{
+			Type:   sonarsourcev1alpha1.ConditionPending,
+			Status: corev1.ConditionFalse,
+		})
+	}
+	r.updateStatus(newStatus, instance)
 
 	return reconcile.Result{}, nil
 }

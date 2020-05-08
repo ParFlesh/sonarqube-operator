@@ -15,7 +15,7 @@ import (
 
 func (r *ReconcileSonarQube) updateStatus(s *sonarsourcev1alpha1.SonarQubeStatus, cr *sonarsourcev1alpha1.SonarQube) {
 	reqLogger := log.WithValues("SonarQube.Namespace", cr.Namespace, "SonarQube.Name", cr.Name)
-	if !reflect.DeepEqual(*s, cr.Status) {
+	if !reflect.DeepEqual(s, cr.Status) {
 		cr.Status = *s
 		err := r.client.Status().Update(context.TODO(), cr)
 		if err != nil {
@@ -25,7 +25,7 @@ func (r *ReconcileSonarQube) updateStatus(s *sonarsourcev1alpha1.SonarQubeStatus
 		if err != nil {
 			reqLogger.Error(err, "failed to get updated sonarqube")
 		}
-		*s = cr.Status
+		s = &cr.Status
 	}
 }
 

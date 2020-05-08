@@ -3,6 +3,7 @@ package sonarqube
 import (
 	"context"
 	"fmt"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +37,8 @@ func (r *ReconcileSonarQube) ReconcileAppStatefulSet(cr *sonarsourcev1alpha1.Son
 		return statefulSet, err
 	}
 
-	newStatus := cr.Status
+	newStatus := &sonarsourcev1alpha1.SonarQubeStatus{}
+	*newStatus = cr.Status
 
 	podList := &corev1.PodList{}
 	listOpts := []client.ListOption{
@@ -49,7 +51,19 @@ func (r *ReconcileSonarQube) ReconcileAppStatefulSet(cr *sonarsourcev1alpha1.Son
 	}
 	newStatus.Pods = getPodStatuses(podList.Items)
 
-	r.updateStatus(&newStatus, cr)
+	if statefulSet.Status.CurrentRevision != statefulSet.Status.UpdateRevision {
+		newStatus.Conditions.SetCondition(status.Condition{
+			Type:               sonarsourcev1alpha1.ConditionPending,
+			Status:             corev1.ConditionTrue,
+			Reason:             sonarsourcev1alpha1.ConditionReasourcesUpdating,
+			Message:            fmt.Sprintf("Application statefulset updating from revision %s to %s", statefulSet.Status.CurrentRevision, statefulSet.Status.UpdateRevision),
+			LastTransitionTime: metav1.Time{},
+		})
+		newStatus.Phase = sonarsourcev1alpha1.ConditionPending
+		newStatus.Reason = newStatus.Conditions.GetCondition(newStatus.Phase).Message
+	}
+
+	r.updateStatus(newStatus, cr)
 	return statefulSet, nil
 }
 

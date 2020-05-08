@@ -21,6 +21,8 @@ const (
 const (
 	// ConditionResourcesCreating means that resources are being created
 	ConditionResourcesCreating status.ConditionReason = "CreatingResources"
+	// ConditionReasourceUpdating means that resources are updating
+	ConditionReasourcesUpdating status.ConditionReason = "ResourcesUpdating"
 )
 
 const (

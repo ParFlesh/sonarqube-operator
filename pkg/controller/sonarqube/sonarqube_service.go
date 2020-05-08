@@ -28,11 +28,12 @@ func (r *ReconcileSonarQube) ReconcileAppService(cr *sonarsourcev1alpha1.SonarQu
 		return service, err
 	}
 
-	newStatus := cr.Status
+	newStatus := &sonarsourcev1alpha1.SonarQubeStatus{}
+	*newStatus = cr.Status
 
 	newStatus.Service = service.Name
 
-	r.updateStatus(&newStatus, cr)
+	r.updateStatus(newStatus, cr)
 
 	return service, nil
 }
