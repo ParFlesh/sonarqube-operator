@@ -97,16 +97,13 @@ func (r *ReconcileSonarQube) newSonarQubeServer(cr *sonarsourcev1alpha1.SonarQub
 			Labels:    labels,
 		},
 		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-			Size:    &[]int32{0}[0],
-			Version: cr.Spec.Version,
-			Image:   cr.Spec.Image,
-			Secret:  cr.Spec.Secret,
-			Cluster: sonarsourcev1alpha1.Cluster{
-				Enabled:     true,
-				Type:        component,
-				Hosts:       nil,
-				SearchHosts: nil,
-			},
+			Size:        &[]int32{0}[0],
+			Version:     cr.Spec.Version,
+			Image:       cr.Spec.Image,
+			Secret:      cr.Spec.Secret,
+			Type:        component,
+			Hosts:       nil,
+			SearchHosts: nil,
 			Deployment: sonarsourcev1alpha1.Deployment{
 				ServiceAccount: serviceAccount.Name,
 			},

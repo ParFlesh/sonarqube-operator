@@ -110,7 +110,7 @@ func (r *ReconcileSonarQubeServer) Labels(cr *sonarsourcev1alpha1.SonarQubeServe
 	labels[sonarsourcev1alpha1.KubeAppInstance] = cr.Name
 	labels[sonarsourcev1alpha1.KubeAppVersion] = cr.Status.RevisionHash
 	labels[sonarsourcev1alpha1.KubeAppManagedby] = fmt.Sprintf("sonarqube-operator.v%s", version.Version)
-	labels[sonarsourcev1alpha1.KubeAppComponent] = string(cr.Spec.Cluster.Type)
+	labels[sonarsourcev1alpha1.KubeAppComponent] = string(cr.Spec.Type)
 
 	for k, v := range cr.Labels {
 		labels[k] = v

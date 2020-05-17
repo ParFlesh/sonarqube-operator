@@ -45,28 +45,6 @@ type SonarQubeServerSpec struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:Secret"
 	Secret string `json:"secret,omitempty"`
 
-	// Cluster
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
-	Cluster Cluster `json:"cluster,omitempty"`
-
-	// Deployment
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
-	Deployment Deployment `json:"deployment,omitempty"`
-
-	// Storage
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
-	Storage Storage `json:"storage,omitempty"`
-}
-
-type Cluster struct {
-	// Enable clustering
-	// +optional
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Enabled"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
-	// +kubebuilder:validation:Default=false
-	Enabled bool `json:"enabled,omitempty"`
-
 	// Sonar Node Type application or search when clustering is enabled otherwise aio (all-in-one)
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
@@ -89,6 +67,17 @@ type Cluster struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Search Hosts"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch,urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:searchHosts,urn:alm:descriptor:com.tectonic.ui:advanced"
 	SearchHosts []string `json:"searchHosts,omitempty"`
+
+	// Deployment
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
+	Deployment Deployment `json:"deployment,omitempty"`
+
+	// Storage
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
+	Storage Storage `json:"storage,omitempty"`
+}
+
+type Cluster struct {
 }
 
 type Deployment struct {

@@ -1274,9 +1274,11 @@ spec:
                 Don't add cluster properties to configuration files as this could
                 cause unexpected results
               type: string
+            shutdown:
+              description: Shutdown SonarQube cluster
+              type: boolean
             size:
-              description: Size of SonarQube Cluster (0 will shutdown application
-                and search nodes)
+              description: Number of SonarQube Compute Engines
               format: int32
               type: integer
             version:
@@ -1327,9 +1329,6 @@ spec:
                 - type
                 type: object
               type: array
-            phase:
-              description: Status of instance
-              type: string
             pods:
               additionalProperties:
                 items:
@@ -1337,9 +1336,6 @@ spec:
                 type: array
               description: Status of pods
               type: object
-            reason:
-              description: Reason for status
-              type: string
             revision:
               description: Expected revision for resources Incremented when there
                 is a change to spec or controller version

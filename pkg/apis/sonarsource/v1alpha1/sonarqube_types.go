@@ -234,12 +234,6 @@ type SonarQubeStatus struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
 	SearchPods PodStatuses `json:"searchPods"`
 
-	// Status of instance
-	Phase status.ConditionType `json:"phase,omitempty"`
-
-	// Reason for status
-	Reason string `json:"reason,omitempty"`
-
 	// Expected revision for resources
 	// Incremented when there is a change to spec or controller version
 	Revision int32 `json:"revision,omitempty"`

@@ -2,10 +2,13 @@ package sonarqube
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"github.com/magiconair/properties"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
+	"github.com/thanhpk/randstr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +59,8 @@ func (r *ReconcileSonarQube) ReconcileSecret(cr *sonarsourcev1alpha1.SonarQube) 
 		}
 	}
 
-	if err := r.verifyProperties(cr, foundSecret); err != nil {
+	err = r.verifySecret(cr, foundSecret)
+	if err != nil {
 		return foundSecret, err
 	}
 
@@ -95,9 +99,9 @@ func (r *ReconcileSonarQube) newSecret(cr *sonarsourcev1alpha1.SonarQube) (*core
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
-		StringData: map[string]string{
-			"sonar.properties": "",
-			"wrapper.conf":     "",
+		Data: map[string][]byte{
+			"sonar.properties": []byte(""),
+			"wrapper.conf":     []byte(""),
 		},
 		Type: corev1.SecretTypeOpaque,
 	}
@@ -123,25 +127,43 @@ func (r *ReconcileSonarQube) newSecret(cr *sonarsourcev1alpha1.SonarQube) (*core
 	return dep, nil
 }
 
-func (r *ReconcileSonarQube) verifyProperties(cr *sonarsourcev1alpha1.SonarQube, s *corev1.Secret) error {
-	var sonarProperties *properties.Properties
-	var sonarPropertiesExists bool
-	if v, ok := s.Data["sonar.properties"]; ok {
-		sonarPropertiesExists = ok
-		sonarProperties, _ = properties.Load(v, properties.UTF8)
+func (r *ReconcileSonarQube) verifySecret(cr *sonarsourcev1alpha1.SonarQube, s *corev1.Secret) error {
+	sonarProperties, err := utils.GetProperties(s, "sonar.properties")
+	if err != nil {
+		return err
 	}
 
-	if cr.Spec.Clustered && sonarPropertiesExists {
-		if _, ok := sonarProperties.Get("sonar.jdbc.url"); !ok {
-			return &utils.Error{
-				Reason:  utils.ErrorReasonSpecInvalid,
-				Message: "clustering enabled but no jdbc configuration specified",
-			}
-		}
-	} else if cr.Spec.Clustered {
+	if _, ok := sonarProperties.Get("sonar.jdbc.url"); !ok {
 		return &utils.Error{
 			Reason:  utils.ErrorReasonSpecInvalid,
-			Message: "clustering enabled but no jdbc configuration specified",
+			Message: "sonar.jdbc.url not set",
+		}
+	}
+
+	if _, ok := sonarProperties.Get("sonar.auth.jwtBase64Hs256Secret"); !ok {
+		secret := randstr.String(8)
+		data := randstr.String(32)
+
+		// Create a new HMAC by defining the hash type and the key (as byte array)
+		h := hmac.New(sha256.New, []byte(secret))
+
+		// Write Data to it
+		h.Write([]byte(data))
+
+		// Get result and encode as hexadecimal string
+		sha := hex.EncodeToString(h.Sum(nil))
+
+		s.Data["sonar.properties"] = append(s.Data["sonar.properties"], "\nsonar.auth.jwtBase64Hs256Secret="...)
+		s.Data["sonar.properties"] = append(s.Data["sonar.properties"], sha...)
+
+		err := r.client.Update(context.TODO(), s)
+		if err != nil {
+			return err
+		}
+
+		return &utils.Error{
+			Reason:  utils.ErrorReasonResourceUpdate,
+			Message: fmt.Sprintf("added sonar.auth.jwtBase64Hs256Secret to sonar.properties in %s", s.Name),
 		}
 	}
 

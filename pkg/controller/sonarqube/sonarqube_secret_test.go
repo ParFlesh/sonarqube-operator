@@ -78,6 +78,21 @@ func TestSonarQubeSecret(t *testing.T) {
 	}
 
 	secret, err = r.ReconcileSecret(sonarqube)
+	if err == nil || utils.ReasonForError(err) != utils.ErrorReasonSpecInvalid {
+		t.Error("reconcileSecret: did not return invalid when sonar.jdbc.url empty")
+	}
+	secret.Data["sonar.properties"] = append(secret.Data["sonar.properties"], "\nsonar.jdbc.url=test"...)
+	err = r.client.Update(context.TODO(), secret)
+	if err != nil {
+		t.Fatalf("reconcileSecret: (%v)", err)
+	}
+
+	secret, err = r.ReconcileSecret(sonarqube)
+	if err == nil || utils.ReasonForError(err) != utils.ErrorReasonResourceUpdate {
+		t.Error("reconcileSecret: did not set sonar.auth.jwtBase64Hs256Secret")
+	}
+
+	secret, err = r.ReconcileSecret(sonarqube)
 	if err != nil {
 		t.Error("reconcileSecret: returned error even though secret is in expected state")
 	}

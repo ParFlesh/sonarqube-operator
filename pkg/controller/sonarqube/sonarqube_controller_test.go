@@ -102,6 +102,50 @@ func TestSonarQubeController(t *testing.T) {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
+	if res.Requeue {
+		t.Error("reconcile requeued even though spec should be invalid")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		t.Errorf("condition progressing not set to false")
+	}
+	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
+		t.Errorf("condition invalid not set")
+	}
+
+	secret.Data["sonar.properties"] = []byte("\nsonar.jdbc.url=test")
+	err = r.client.Update(context.TODO(), secret)
+	if err != nil {
+		t.Fatalf("reconcileSecret: (%v)", err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
+		t.Errorf("condition invalid not set to false")
+	}
+	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		t.Errorf("condition progressing not set")
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
 	if !res.Requeue {
 		t.Error("reconcile did not requeue")
 	}

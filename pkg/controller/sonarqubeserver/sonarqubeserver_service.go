@@ -86,7 +86,7 @@ func (r *ReconcileSonarQubeServer) newService(cr *sonarsourcev1alpha1.SonarQubeS
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-	switch cr.Spec.Cluster.Type {
+	switch cr.Spec.Type {
 	case sonarsourcev1alpha1.AIO, "":
 		dep.Spec.Ports = []corev1.ServicePort{
 			{

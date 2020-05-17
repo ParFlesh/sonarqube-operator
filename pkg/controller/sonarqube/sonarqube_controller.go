@@ -203,9 +203,6 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		})
 	}
 
-	newStatus.Phase = sonarsourcev1alpha1.ConditionRunning
-	newStatus.Reason = ""
-
 	r.updateStatus(newStatus, instance)
 
 	return reconcile.Result{}, nil

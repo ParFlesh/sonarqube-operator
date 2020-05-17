@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strconv"
 	"strings"
 )
 
@@ -217,7 +216,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 		},
 	}
 
-	switch cr.Spec.Cluster.Type {
+	switch cr.Spec.Type {
 	case sonarsourcev1alpha1.AIO, "":
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
 			{
@@ -259,11 +258,11 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				Protocol:      corev1.ProtocolTCP,
 			},
 		}
-		hosts := cr.Spec.Cluster.Hosts
+		hosts := cr.Spec.Hosts
 		if !utils.ContainsString(hosts, service.Spec.ClusterIP) {
 			hosts = append(hosts, service.Spec.ClusterIP)
 		}
-		searchHosts := cr.Spec.Cluster.SearchHosts
+		searchHosts := cr.Spec.SearchHosts
 		if !utils.ContainsString(searchHosts, service.Spec.ClusterIP) {
 			searchHosts = append(searchHosts, service.Spec.ClusterIP)
 		}
@@ -271,11 +270,11 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 		clusteredEnv := []corev1.EnvVar{
 			{
 				Name:  "SONAR_CLUSTER_ENABLED",
-				Value: strconv.FormatBool(cr.Spec.Cluster.Enabled),
+				Value: "true",
 			},
 			{
 				Name:  "SONAR_CLUSTER_NODE_TYPE",
-				Value: string(cr.Spec.Cluster.Type),
+				Value: string(cr.Spec.Type),
 			},
 			{
 				Name:  "SONAR_CLUSTER_SEARCH_HOSTS",
@@ -310,23 +309,23 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				Protocol:      corev1.ProtocolTCP,
 			},
 		}
-		searchHosts := cr.Spec.Cluster.SearchHosts
-		if !utils.ContainsString(cr.Spec.Cluster.SearchHosts, service.Spec.ClusterIP) {
+		searchHosts := cr.Spec.SearchHosts
+		if !utils.ContainsString(cr.Spec.SearchHosts, service.Spec.ClusterIP) {
 			searchHosts = append(searchHosts, service.Spec.ClusterIP)
 		}
 
 		clusteredEnv := []corev1.EnvVar{
 			{
 				Name:  "SONAR_CLUSTER_ENABLED",
-				Value: strconv.FormatBool(cr.Spec.Cluster.Enabled),
+				Value: "true",
 			},
 			{
 				Name:  "SONAR_CLUSTER_NODE_TYPE",
-				Value: string(cr.Spec.Cluster.Type),
+				Value: string(cr.Spec.Type),
 			},
 			{
 				Name:  "SONAR_CLUSTER_SEARCH_HOSTS",
-				Value: strings.Join(cr.Spec.Cluster.SearchHosts, ","),
+				Value: strings.Join(cr.Spec.SearchHosts, ","),
 			},
 			{
 				Name:  "SONAR_SEARCH_HOST",

@@ -31,31 +31,6 @@ spec:
         spec:
           description: SonarQubeServerSpec defines the desired state of SonarQubeServer
           properties:
-            cluster:
-              description: Cluster
-              properties:
-                enabled:
-                  description: Enable clustering
-                  type: boolean
-                hosts:
-                  description: SonarQube application hosts list
-                  items:
-                    type: string
-                  type: array
-                searchHosts:
-                  description: SonarQube search hosts list
-                  items:
-                    type: string
-                  type: array
-                type:
-                  description: Sonar Node Type application or search when clustering
-                    is enabled otherwise aio (all-in-one)
-                  enum:
-                  - aio
-                  - application
-                  - search
-                  type: string
-              type: object
             deployment:
               description: Deployment
               properties:
@@ -662,9 +637,19 @@ spec:
                   description: Service Account for running pods
                   type: string
               type: object
+            hosts:
+              description: SonarQube application hosts list
+              items:
+                type: string
+              type: array
             image:
               description: Image of SonarQube to deploy
               type: string
+            searchHosts:
+              description: SonarQube search hosts list
+              items:
+                type: string
+              type: array
             secret:
               description: Secret with sonar configuration files (sonar.properties).
                 Don't add cluster properties to configuration files as this could
@@ -691,6 +676,14 @@ spec:
                   description: Extensions Volume Size
                   type: string
               type: object
+            type:
+              description: Sonar Node Type application or search when clustering is
+                enabled otherwise aio (all-in-one)
+              enum:
+              - aio
+              - application
+              - search
+              type: string
             version:
               description: Version of SonarQube image to deploy
               type: string

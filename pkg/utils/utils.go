@@ -1,6 +1,11 @@
 package utils
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"fmt"
+	"github.com/magiconair/properties"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 func IsOwner(owner, child metav1.Object) bool {
 	ownerUID := owner.GetUID()
@@ -19,4 +24,15 @@ func ContainsString(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func GetProperties(s *corev1.Secret, f string) (*properties.Properties, error) {
+	if v, ok := s.Data[f]; ok {
+		return properties.Load(v, properties.UTF8)
+	} else {
+		return nil, &Error{
+			Reason:  ErrorReasonSpecInvalid,
+			Message: fmt.Sprintf("%s doesn't exist in secret %s", f, s.Name),
+		}
+	}
 }

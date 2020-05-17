@@ -168,8 +168,13 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
         - urn:alm:descriptor:io.kubernetes:Secret
-      - description: Size of SonarQube Cluster (0 will shutdown application and search
-          nodes)
+      - description: Shutdown SonarQube cluster
+        displayName: Shutdown
+        path: shutdown
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
+      - description: Number of SonarQube Compute Engines
         displayName: Size
         path: size
         x-descriptors:
@@ -202,33 +207,6 @@ spec:
       kind: SonarQubeServer
       name: sonarqubeservers.sonarsource.parflesh.github.io
       specDescriptors:
-      - description: Enable clustering
-        displayName: Enabled
-        path: cluster.enabled
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: SonarQube application hosts list
-        displayName: Hosts
-        path: cluster.hosts
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:hosts
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: SonarQube search hosts list
-        displayName: Search Hosts
-        path: cluster.searchHosts
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:searchHosts
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Sonar Node Type application or search when clustering is enabled
-          otherwise aio (all-in-one)
-        displayName: Secret
-        path: cluster.type
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:select:aio
-        - urn:alm:descriptor:com.tectonic.ui:select:application
-        - urn:alm:descriptor:com.tectonic.ui:select:search
       - description: Node Affinity
         displayName: Node Affinity
         path: deployment.nodeAffinity
@@ -259,12 +237,26 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: SonarQube application hosts list
+        displayName: Hosts
+        path: hosts
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:hosts
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Image of SonarQube to deploy
         displayName: Image
         path: image
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: SonarQube search hosts list
+        displayName: Search Hosts
+        path: searchHosts
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:searchHosts
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Secret with sonar configuration files (sonar.properties). Don't
           add cluster properties to configuration files as this could cause unexpected
           results
@@ -301,6 +293,14 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Sonar Node Type application or search when clustering is enabled
+          otherwise aio (all-in-one)
+        displayName: Secret
+        path: type
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select:aio
+        - urn:alm:descriptor:com.tectonic.ui:select:application
+        - urn:alm:descriptor:com.tectonic.ui:select:search
       - description: Version of SonarQube image to deploy
         displayName: Version
         path: version
@@ -372,6 +372,7 @@ spec:
           - events
           - configmaps
           - secrets
+          - serviceaccounts
           verbs:
           - create
           - delete

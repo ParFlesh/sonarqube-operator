@@ -40,10 +40,7 @@ func TestSonarQubeServerService(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-				Cluster: sonarsourcev1alpha1.Cluster{
-					Enabled: true,
-					Type:    sonarsourcev1alpha1.Application,
-				},
+				Type: sonarsourcev1alpha1.Application,
 			},
 		},
 		{
@@ -52,10 +49,8 @@ func TestSonarQubeServerService(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-				Cluster: sonarsourcev1alpha1.Cluster{
-					Enabled: true,
-					Type:    sonarsourcev1alpha1.Search,
-				}},
+				Type: sonarsourcev1alpha1.Search,
+			},
 		},
 	}
 	// Objects to track in the fake client.

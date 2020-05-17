@@ -55,6 +55,11 @@ func (r *ReconcileSonarQubeServer) ReconcileSecret(cr *sonarsourcev1alpha1.Sonar
 		}
 	}
 
+	err = r.verifySecret(cr, foundSecret)
+	if err != nil {
+		return foundSecret, nil
+	}
+
 	return foundSecret, nil
 }
 
@@ -116,4 +121,19 @@ func (r *ReconcileSonarQubeServer) newSecret(cr *sonarsourcev1alpha1.SonarQubeSe
 	}
 
 	return dep, nil
+}
+
+func (r *ReconcileSonarQubeServer) verifySecret(cr *sonarsourcev1alpha1.SonarQubeServer, s *corev1.Secret) error {
+	/*var sonarProperties *properties.Properties
+	var sonarPropertiesExists bool
+	if v, ok := s.Data["sonar.properties"]; ok {
+		sonarPropertiesExists = ok
+		sonarProperties, _ = properties.Load(v, properties.UTF8)
+	}*/
+
+	switch cr.Spec.Type {
+	case sonarsourcev1alpha1.Application, sonarsourcev1alpha1.Search:
+	}
+
+	return nil
 }
