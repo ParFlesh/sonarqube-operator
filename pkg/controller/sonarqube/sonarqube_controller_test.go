@@ -116,10 +116,10 @@ func TestSonarQubeController(t *testing.T) {
 		t.Errorf("condition invalid not set")
 	}
 
-	secret.Data["sonar.properties"] = []byte("\nsonar.jdbc.url=test")
+	secret.Data["sonar.properties"] = append(secret.Data["sonar.properties"], "\nsonar.jdbc.url=test"...)
 	err = r.client.Update(context.TODO(), secret)
 	if err != nil {
-		t.Fatalf("reconcileSecret: (%v)", err)
+		t.Fatalf(ReconcileErrorFormat, err)
 	}
 
 	res, err = r.Reconcile(req)
@@ -188,7 +188,7 @@ func TestSonarQubeController(t *testing.T) {
 	}
 
 	// Check for search sonarqube servers
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		res, err = r.Reconcile(req)
 		if err != nil {
 			t.Fatalf(ReconcileErrorFormat, err)
@@ -197,6 +197,9 @@ func TestSonarQubeController(t *testing.T) {
 		if !res.Requeue {
 			t.Error("reconcile did not requeue")
 		}
+	}
+
+	for i := 0; i < 3; i++ {
 		sonarQubeServer := &sonarsourcev1alpha1.SonarQubeServer{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Search, i), Namespace: sonarqube.Namespace}, sonarQubeServer)
 		if err != nil && errors.IsNotFound(err) {
@@ -206,14 +209,6 @@ func TestSonarQubeController(t *testing.T) {
 		}
 	}
 
-	res, err = r.Reconcile(req)
-	if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-	// Check the result of reconciliation to make sure it has the desired state.
-	if !res.Requeue {
-		t.Error("reconcile did not requeue")
-	}
 	sonarQubeServer := &sonarsourcev1alpha1.SonarQubeServer{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Application, 0), Namespace: sonarqube.Namespace}, sonarQubeServer)
 	if err != nil && errors.IsNotFound(err) {

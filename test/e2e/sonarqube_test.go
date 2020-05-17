@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"github.com/parflesh/sonarqube-operator/pkg/apis"
 	operator "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
+	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
@@ -43,6 +47,29 @@ func sonarqubeDeployTest(t *testing.T, f *framework.Framework, ctx *framework.Co
 	err = f.Client.Create(goctx.TODO(), exampleSonarQube, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	if err != nil {
 		return err
+	}
+
+	// Wait for secret to be created and add sonar.jdbc.url
+	for {
+		sonarQube := &operator.SonarQube{}
+		err := f.Client.Get(context.TODO(), types.NamespacedName{Name: exampleSonarQube.Name, Namespace: exampleSonarQube.Namespace}, sonarQube)
+		if err != nil {
+			return err
+		}
+		if sonarQube.Spec.Secret != "" {
+			secret := &corev1.Secret{}
+			err := f.Client.Get(context.TODO(), types.NamespacedName{Name: sonarQube.Spec.Secret, Namespace: sonarQube.Namespace}, secret)
+			if err != nil && !errors.IsNotFound(err) {
+				return err
+			} else if err == nil {
+				secret.Data["sonar.properties"] = append(secret.Data["sonar.properties"], "\nsonar.jdbc.url=test"...)
+				err := f.Client.Update(context.TODO(), secret)
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
 	}
 
 	// Wait for search servers

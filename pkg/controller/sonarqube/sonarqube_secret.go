@@ -140,7 +140,7 @@ func (r *ReconcileSonarQube) verifySecret(cr *sonarsourcev1alpha1.SonarQube, s *
 		}
 	}
 
-	if _, ok := sonarProperties.Get("sonar.auth.jwtBase64Hs256Secret"); !ok {
+	if _, ok := sonarProperties.Get("sonar.auth.jwtBase64Hs256Secret"); !ok && isOwner(cr, s) {
 		secret := randstr.String(8)
 		data := randstr.String(32)
 
@@ -164,6 +164,12 @@ func (r *ReconcileSonarQube) verifySecret(cr *sonarsourcev1alpha1.SonarQube, s *
 		return &utils.Error{
 			Reason:  utils.ErrorReasonResourceUpdate,
 			Message: fmt.Sprintf("added sonar.auth.jwtBase64Hs256Secret to sonar.properties in %s", s.Name),
+		}
+	} else if !ok {
+		// Don't make changes to unowned resources
+		return &utils.Error{
+			Reason:  utils.ErrorReasonSpecInvalid,
+			Message: "sonar.auth.jwtBase64Hs256Secret not set",
 		}
 	}
 
