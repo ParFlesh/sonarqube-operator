@@ -1,4 +1,4 @@
-package sonarqube
+package sonarqubeserver
 
 import (
 	"context"
@@ -12,23 +12,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// Reconciles Service for SonarQube
+// Reconciles Service for SonarQubeServer
 // Returns: Service, Error
 // If Error is non-nil, Service is not in expected state
 // Errors:
 //   ErrorReasonResourceCreate: returned when Service does not exists
 //   ErrorReasonResourceUpdate: returned when Service was updated to meet expected state
 //   ErrorReasonUnknown: returned when unhandled error from client occurs
-func (r *ReconcileSonarQube) ReconcileServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
-	foundService, err := r.findServiceAccount(cr)
+func (r *ReconcileSonarQubeServer) ReconcileServiceAccount(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.ServiceAccount, error) {
+	foundServiceAccount, err := r.findServiceAccount(cr)
 	if err != nil {
-		return foundService, err
+		return foundServiceAccount, err
 	}
 
-	return foundService, nil
+	return foundServiceAccount, nil
 }
 
-func (r *ReconcileSonarQube) findServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
+func (r *ReconcileSonarQubeServer) findServiceAccount(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.ServiceAccount, error) {
 	newService, err := r.newServiceAccount(cr)
 	if err != nil {
 		return newService, err
@@ -52,9 +52,8 @@ func (r *ReconcileSonarQube) findServiceAccount(cr *sonarsourcev1alpha1.SonarQub
 	return foundServiceAccount, nil
 }
 
-func (r *ReconcileSonarQube) newServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
+func (r *ReconcileSonarQubeServer) newServiceAccount(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.ServiceAccount, error) {
 	labels := r.Labels(cr)
-	labels["app.kubernetes.io/component"] = "application"
 
 	dep := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -62,6 +61,10 @@ func (r *ReconcileSonarQube) newServiceAccount(cr *sonarsourcev1alpha1.SonarQube
 			Name:      cr.Name,
 			Labels:    labels,
 		},
+	}
+
+	if cr.Spec.Deployment.ServiceAccount != "" {
+		dep.Name = cr.Spec.Deployment.ServiceAccount
 	}
 
 	if err := controllerutil.SetControllerReference(cr, dep, r.scheme); err != nil {

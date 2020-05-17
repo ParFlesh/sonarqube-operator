@@ -1,4 +1,4 @@
-package sonarqube
+package sonarqubeserver
 
 import (
 	"context"
@@ -21,20 +21,20 @@ const (
 	SearchPort         int32 = 9001
 )
 
-// Reconciles Service for SonarQube
+// Reconciles Service for SonarQubeServer
 // Returns: Service, Error
 // If Error is non-nil, Service is not in expected state
 // Errors:
 //   ErrorReasonResourceCreate: returned when Service does not exists
 //   ErrorReasonResourceUpdate: returned when Service was updated to meet expected state
 //   ErrorReasonUnknown: returned when unhandled error from client occurs
-func (r *ReconcileSonarQube) ReconcileService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
+func (r *ReconcileSonarQubeServer) ReconcileService(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Service, error) {
 	service, err := r.findService(cr)
 	if err != nil {
 		return service, err
 	}
 
-	newStatus := &sonarsourcev1alpha1.SonarQubeStatus{}
+	newStatus := &sonarsourcev1alpha1.SonarQubeServerStatus{}
 	*newStatus = cr.Status
 
 	newStatus.Service = service.Name
@@ -48,7 +48,7 @@ func (r *ReconcileSonarQube) ReconcileService(cr *sonarsourcev1alpha1.SonarQube)
 	return service, nil
 }
 
-func (r *ReconcileSonarQube) findService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
+func (r *ReconcileSonarQubeServer) findService(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Service, error) {
 	newService, err := r.newService(cr)
 	if err != nil {
 		return newService, err
@@ -72,7 +72,7 @@ func (r *ReconcileSonarQube) findService(cr *sonarsourcev1alpha1.SonarQube) (*co
 	return foundService, nil
 }
 
-func (r *ReconcileSonarQube) newService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
+func (r *ReconcileSonarQubeServer) newService(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Service, error) {
 	labels := r.Labels(cr)
 
 	dep := &corev1.Service{
@@ -86,38 +86,66 @@ func (r *ReconcileSonarQube) newService(cr *sonarsourcev1alpha1.SonarQube) (*cor
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-
-	dep.Spec.Ports = []corev1.ServicePort{
-		{
-			Name:     "web",
-			Protocol: corev1.ProtocolTCP,
-			Port:     ApplicationWebPort,
-			TargetPort: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: ApplicationWebPort,
-				StrVal: "",
+	switch cr.Spec.Cluster.Type {
+	case sonarsourcev1alpha1.AIO, "":
+		dep.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:     "web",
+				Protocol: corev1.ProtocolTCP,
+				Port:     ApplicationWebPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: ApplicationWebPort,
+					StrVal: "",
+				},
 			},
-		},
-		{
-			Name:     "ce",
-			Protocol: corev1.ProtocolTCP,
-			Port:     ApplicationCEPort,
-			TargetPort: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: ApplicationCEPort,
-				StrVal: "",
+		}
+	case sonarsourcev1alpha1.Application:
+		dep.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:     "web",
+				Protocol: corev1.ProtocolTCP,
+				Port:     ApplicationWebPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: ApplicationWebPort,
+					StrVal: "",
+				},
 			},
-		},
-		{
-			Name:     "node",
-			Protocol: corev1.ProtocolTCP,
-			Port:     ApplicationPort,
-			TargetPort: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: ApplicationPort,
-				StrVal: "",
+			{
+				Name:     "ce",
+				Protocol: corev1.ProtocolTCP,
+				Port:     ApplicationCEPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: ApplicationCEPort,
+					StrVal: "",
+				},
 			},
-		},
+			{
+				Name:     "node",
+				Protocol: corev1.ProtocolTCP,
+				Port:     ApplicationPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: ApplicationPort,
+					StrVal: "",
+				},
+			},
+		}
+	case sonarsourcev1alpha1.Search:
+		dep.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:     "search",
+				Protocol: corev1.ProtocolTCP,
+				Port:     SearchPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: SearchPort,
+					StrVal: "",
+				},
+			},
+		}
 	}
 
 	if err := controllerutil.SetControllerReference(cr, dep, r.scheme); err != nil {
@@ -127,7 +155,7 @@ func (r *ReconcileSonarQube) newService(cr *sonarsourcev1alpha1.SonarQube) (*cor
 	return dep, nil
 }
 
-func (r *ReconcileSonarQube) verifyService(cr *sonarsourcev1alpha1.SonarQube, s *corev1.Service) error {
+func (r *ReconcileSonarQubeServer) verifyService(cr *sonarsourcev1alpha1.SonarQubeServer, s *corev1.Service) error {
 	newService, err := r.newService(cr)
 	if err != nil {
 		return err
@@ -178,4 +206,5 @@ func (r *ReconcileSonarQube) verifyService(cr *sonarsourcev1alpha1.SonarQube, s 
 	}
 
 	return nil
+
 }

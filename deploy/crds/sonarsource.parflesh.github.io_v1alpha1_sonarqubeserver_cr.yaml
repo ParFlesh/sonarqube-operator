@@ -1,5 +1,5 @@
 apiVersion: sonarsource.parflesh.github.io/v1alpha1
-kind: SonarQube
+kind: SonarQubeServer
 metadata:
-  name: example-sonarqube
+  name: example-sonarqubeserver
 spec: {}

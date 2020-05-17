@@ -11,12 +11,13 @@ import (
 
 // SonarQubeSpec defines the desired state of SonarQube
 type SonarQubeSpec struct {
-	// The name of a higher level application this instance is part of
+
+	// Size of SonarQube Cluster (0 will shutdown application and search nodes)
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Application"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance"
-	Application string `json:"application,omitempty"`
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Size"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:number"
+	Size int32 `json:"size,omitempty"`
 
 	// Version of SonarQube image to deploy
 	// +optional
@@ -32,8 +33,8 @@ type SonarQubeSpec struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:advanced"
 	Image string `json:"image,omitempty"`
 
-	// Secret with sonar configuration each key will be added as environment variables into Sonar Container.
-	// (More Information: https://docs.sonarqube.org/latest/setup/environment-variables/)
+	// Secret with sonar configuration files (sonar.properties).
+	// Don't add cluster properties to configuration files as this could cause unexpected results
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
@@ -102,14 +103,6 @@ type ApplicationPodConfig struct {
 	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Priority Class"
 	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements,urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced,urn:alm:descriptor:com.tectonic.ui:advanced"
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// Application Node replicas (Only greater than 1 if clustered enabled)
-	// (If set to 0, application and search nodes will be shutdown)
-	// +optional
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Node Replicas"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:number,urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance"
-	Replicas int32 `json:"replicas,omitempty"`
 
 	// Storage
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
@@ -253,6 +246,9 @@ type SonarQubeStatus struct {
 // SonarQube is the Schema for the sonarqubes API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=sonarqubes,scope=Namespaced
+// +operator-sdk:gen-csv:customresourcedefinitions.resources="StatefulSet,v1,\"\""
+// +operator-sdk:gen-csv:customresourcedefinitions.resources="Service,v1,\"\""
+// +operator-sdk:gen-csv:customresourcedefinitions.resources="Secret,v1,\"\""
 type SonarQube struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

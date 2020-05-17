@@ -70,6 +70,7 @@ rules:
   - sonarsource.parflesh.github.io
   resources:
   - '*'
+  - sonarqubeservers
   verbs:
   - create
   - delete

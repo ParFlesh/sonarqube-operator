@@ -23,8 +23,30 @@ const (
 	ConditionResourcesCreating status.ConditionReason = "CreatingResources"
 	// ConditionReasourceUpdating means that resources are updating
 	ConditionReasourcesUpdating status.ConditionReason = "ResourcesUpdating"
+	// ConditionSpecInvalid means that the current spec would result in an invalid running configuration
+	ConditionSpecInvalid status.ConditionReason = "SpecInvalid"
 )
 
 const (
-	SecretAnnotation = "sonarqube.sonarsource.parflesh.github.io/database"
+	SecretAnnotation       = "sonarqube.sonarsource.parflesh.github.io/database"
+	ServerSecretAnnotation = "sonarqubeserver.sonarsource.parflesh.github.io/database"
+)
+
+const (
+	KubeAppComponent = "app.kubernetes.io/component"
+	KubeAppPartof    = "app.kubernetes.io/part-of"
+	KubeAppVersion   = "app.kubernetes.io/version"
+	KubeAppInstance  = "app.kubernetes.io/instance"
+	KubeAppManagedby = "app.kubernetes.io/managed-by"
+	KubeAppName      = "app.kubernetes.io/name"
+	TypeLabel        = "sonarsource.parflesh.github.io/SonarQube"
+	ServerTypeLabel  = "sonarsource.parflesh.github.io/SonarQubeServer"
+)
+
+type ServerType string
+
+const (
+	AIO         ServerType = "aio"
+	Application ServerType = "application"
+	Search      ServerType = "search"
 )

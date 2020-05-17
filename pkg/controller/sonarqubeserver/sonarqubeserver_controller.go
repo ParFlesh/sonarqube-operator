@@ -1,17 +1,16 @@
-package sonarqube
+package sonarqubeserver
 
 import (
 	"context"
-	"fmt"
 	"github.com/operator-framework/operator-sdk/pkg/status"
-	"github.com/parflesh/sonarqube-operator/version"
-	"k8s.io/apimachinery/pkg/types"
+	appsv1 "k8s.io/api/apps/v1"
 	"strings"
 
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -21,19 +20,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	DefaultImage      = "sonarqube"
-	DefaultVolumeSize = "1Gi"
-)
-
-var log = logf.Log.WithName("controller_sonarqube")
+var log = logf.Log.WithName("controller_sonarqubeserver")
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
  */
 
-// Add creates a new SonarQube Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new SonarQubeServer Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -41,25 +35,25 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSonarQube{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileSonarQubeServer{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("sonarqube-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("sonarqubeserver-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to primary resource SonarQube
-	err = c.Watch(&source.Kind{Type: &sonarsourcev1alpha1.SonarQube{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource SonarQubeServer
+	err = c.Watch(&source.Kind{Type: &sonarsourcev1alpha1.SonarQubeServer{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to secondary resource StatefulSet and requeue the owner SonarQube
-	err = c.Watch(&source.Kind{Type: &sonarsourcev1alpha1.SonarQubeServer{}}, &handler.EnqueueRequestForOwner{
+	// Watch for changes to secondary resource Deployment and requeue the owner SonarQube
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
 	})
@@ -67,7 +61,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to secondary resource PersistentVolumeClaim and requeue the owner SonarQube
+	// Watch for changes to secondary resource Service and requeue the owner SonarQube
 	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
@@ -76,7 +70,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to secondary resource PersistentVolumeClaim and requeue the owner SonarQube
+	// Watch for changes to secondary resource Secret and requeue the owner SonarQube
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
@@ -86,6 +80,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to secondary resource PersistentVolumeClaim and requeue the owner SonarQube
+	err = c.Watch(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to secondary resource Secret and requeue the watcher
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: secretHandlerFunc,
 	})
@@ -105,7 +108,7 @@ func (r secretMapper) Map(o handler.MapObject) []reconcile.Request {
 var secretHandlerFunc secretMapper = func(o handler.MapObject) []reconcile.Request {
 	var output []reconcile.Request
 	for k, v := range o.Meta.GetAnnotations() {
-		if k == sonarsourcev1alpha1.SecretAnnotation {
+		if k == sonarsourcev1alpha1.ServerSecretAnnotation {
 			for _, e := range strings.Split(v, ",") {
 				output = append(output, reconcile.Request{
 					NamespacedName: types.NamespacedName{
@@ -119,25 +122,30 @@ var secretHandlerFunc secretMapper = func(o handler.MapObject) []reconcile.Reque
 	return output
 }
 
-// blank assignment to verify that ReconcileSonarQube implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileSonarQube{}
+// blank assignment to verify that ReconcileSonarQubeServer implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileSonarQubeServer{}
 
-// ReconcileSonarQube reconciles a SonarQube object
-type ReconcileSonarQube struct {
+// ReconcileSonarQubeServer reconciles a SonarQubeServer object
+type ReconcileSonarQubeServer struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a SonarQube object and makes changes based on the state read
-// and what is in the SonarQube.Spec
-func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+// Reconcile reads that state of the cluster for a SonarQubeServer object and makes changes based on the state read
+// and what is in the SonarQubeServer.Spec
+// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
+// a Pod as an example
+// Note:
+// The Controller will requeue the Request to be processed again if the returned error is non-nil or
+// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+func (r *ReconcileSonarQubeServer) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling SonarQube")
+	reqLogger.Info("Reconciling SonarQubeServer")
 
-	// Fetch the SonarQube instance
-	instance := &sonarsourcev1alpha1.SonarQube{}
+	// Fetch the SonarQubeServer instance
+	instance := &sonarsourcev1alpha1.SonarQubeServer{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -150,13 +158,10 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	newStatus := &sonarsourcev1alpha1.SonarQubeStatus{}
+	newStatus := &sonarsourcev1alpha1.SonarQubeServerStatus{}
 	*newStatus = instance.Status
-	if newStatus.Pods == nil {
-		newStatus.Pods = make(sonarsourcev1alpha1.PodStatuses)
-	}
-	if newStatus.SearchPods == nil {
-		newStatus.SearchPods = make(sonarsourcev1alpha1.PodStatuses)
+	if newStatus.Deployment == nil {
+		newStatus.Deployment = make(sonarsourcev1alpha1.DeploymentStatus)
 	}
 	r.updateStatus(newStatus, instance)
 
@@ -175,7 +180,7 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return r.ParseErrorForReconcileResult(instance, err)
 	}
 
-	_, err = r.ReconcileSonarQubeServers(instance)
+	_, err = r.ReconcileDeployment(instance)
 	if err != nil {
 		return r.ParseErrorForReconcileResult(instance, err)
 	}
@@ -203,26 +208,7 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		})
 	}
 
-	newStatus.Phase = sonarsourcev1alpha1.ConditionRunning
-	newStatus.Reason = ""
-
 	r.updateStatus(newStatus, instance)
 
 	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileSonarQube) Labels(cr *sonarsourcev1alpha1.SonarQube) map[string]string {
-	labels := make(map[string]string)
-
-	labels[sonarsourcev1alpha1.TypeLabel] = cr.Name
-	labels[sonarsourcev1alpha1.KubeAppName] = "SonarQube"
-	labels[sonarsourcev1alpha1.KubeAppInstance] = cr.Name
-	labels[sonarsourcev1alpha1.KubeAppVersion] = cr.Status.RevisionHash
-	labels[sonarsourcev1alpha1.KubeAppManagedby] = fmt.Sprintf("sonarqube-operator.v%s", version.Version)
-
-	for k, v := range cr.Labels {
-		labels[k] = v
-	}
-
-	return labels
 }

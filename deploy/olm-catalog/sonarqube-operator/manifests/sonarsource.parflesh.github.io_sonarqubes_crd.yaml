@@ -31,10 +31,6 @@ spec:
         spec:
           description: SonarQubeSpec defines the desired state of SonarQube
           properties:
-            application:
-              description: The name of a higher level application this instance is
-                part of
-              type: string
             clustered:
               description: Run SonarQube as a cluster
               type: boolean
@@ -617,23 +613,26 @@ spec:
                 priorityClass:
                   description: Priority Class Name
                   type: string
-                replicas:
-                  description: Application Node replicas (Only greater than 1 if clustered
-                    enabled) (If set to 0, application and search nodes will be shutdown)
-                  format: int32
-                  type: integer
                 resources:
                   description: Resource requirements
                   properties:
                     limits:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
                     requests:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -1235,13 +1234,21 @@ spec:
                   properties:
                     limits:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
                     requests:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -1263,10 +1270,15 @@ spec:
                   type: object
               type: object
             secret:
-              description: 'Secret with sonar configuration each key will be added
-                as environment variables into Sonar Container. (More Information:
-                https://docs.sonarqube.org/latest/setup/environment-variables/)'
+              description: Secret with sonar configuration files (sonar.properties).
+                Don't add cluster properties to configuration files as this could
+                cause unexpected results
               type: string
+            size:
+              description: Size of SonarQube Cluster (0 will shutdown application
+                and search nodes)
+              format: int32
+              type: integer
             version:
               description: Version of SonarQube image to deploy
               type: string

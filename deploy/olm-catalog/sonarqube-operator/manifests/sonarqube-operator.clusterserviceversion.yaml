@@ -10,11 +10,15 @@ metadata:
           "metadata": {
             "name": "example-sonarqube"
           },
-          "spec": {
-            "node": {
-              "replicas": 1
-            }
-          }
+          "spec": {}
+        },
+        {
+          "apiVersion": "sonarsource.parflesh.github.io/v1alpha1",
+          "kind": "SonarQubeServer",
+          "metadata": {
+            "name": "example-sonarqubeserver"
+          },
+          "spec": {}
         }
       ]
     capabilities: Basic Install
@@ -27,14 +31,17 @@ spec:
     - description: SonarQube is the Schema for the sonarqubes API
       kind: SonarQube
       name: sonarqubes.sonarsource.parflesh.github.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
+      - kind: StatefulSet
+        name: ""
+        version: v1
       specDescriptors:
-      - description: The name of a higher level application this instance is part
-          of
-        displayName: Application
-        path: application
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
-        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Run SonarQube as a cluster
         displayName: Clustered
         path: clustered
@@ -82,13 +89,6 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Application Node replicas (Only greater than 1 if clustered enabled)
-          (If set to 0, application and search nodes will be shutdown)
-        displayName: Node Replicas
-        path: node.replicas
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
-        - urn:alm:descriptor:com.tectonic.ui:number
       - description: Storage Class Name
         displayName: Storage Class Name
         path: node.storage.class
@@ -160,13 +160,21 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.storage
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: 'Secret with sonar configuration each key will be added as environment
-          variables into Sonar Container. (More Information: https://docs.sonarqube.org/latest/setup/environment-variables/)'
+      - description: Secret with sonar configuration files (sonar.properties). Don't
+          add cluster properties to configuration files as this could cause unexpected
+          results
         displayName: Secret
         path: secret
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
         - urn:alm:descriptor:io.kubernetes:Secret
+      - description: Size of SonarQube Cluster (0 will shutdown application and search
+          nodes)
+        displayName: Size
+        path: size
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+        - urn:alm:descriptor:com.tectonic.ui:podCount
       - description: Version of SonarQube image to deploy
         displayName: Version
         path: version
@@ -190,7 +198,129 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes:Service
       version: v1alpha1
-  description: Placeholder description
+    - description: SonarQubeServer is the Schema for the sonarqubeservers API
+      kind: SonarQubeServer
+      name: sonarqubeservers.sonarsource.parflesh.github.io
+      specDescriptors:
+      - description: Enable clustering
+        displayName: Enabled
+        path: cluster.enabled
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: SonarQube application hosts list
+        displayName: Hosts
+        path: cluster.hosts
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:hosts
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: SonarQube search hosts list
+        displayName: Search Hosts
+        path: cluster.searchHosts
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:searchHosts
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Sonar Node Type application or search when clustering is enabled
+          otherwise aio (all-in-one)
+        displayName: Secret
+        path: cluster.type
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select:aio
+        - urn:alm:descriptor:com.tectonic.ui:select:application
+        - urn:alm:descriptor:com.tectonic.ui:select:search
+      - description: Node Affinity
+        displayName: Node Affinity
+        path: deployment.nodeAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
+      - description: Node selector
+        displayName: Node Selector
+        path: deployment.nodeSelector
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:selector:Node
+      - description: Pod Affinity
+        displayName: Pod Affinity
+        path: deployment.podAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAffinity
+      - description: Pod AntiAffinity
+        displayName: Pod AntiAffinity
+        path: deployment.podAntiAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
+      - description: Priority Class Name
+        displayName: Priority Class
+        path: deployment.priorityClass
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Image of SonarQube to deploy
+        displayName: Image
+        path: image
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Secret with sonar configuration files (sonar.properties). Don't
+          add cluster properties to configuration files as this could cause unexpected
+          results
+        displayName: Secret
+        path: secret
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:Secret
+      - description: 0 and 1 are the only valid options.  Used to start and stop server.
+        displayName: Size
+        path: size
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:podCount
+      - description: Storage Class Name
+        displayName: Data Storage Class Name
+        path: storage.dataClass
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
+        - urn:alm:descriptor:io.kubernetes:StorageClass
+      - description: Data Volume Size
+        displayName: Data Volume Size
+        path: storage.dataSize
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Storage Class Name
+        displayName: Extensions Storage Class Name
+        path: storage.extensionsClass
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
+        - urn:alm:descriptor:io.kubernetes:StorageClass
+      - description: Extensions Volume Size
+        displayName: Extensions Volume Size
+        path: storage.extensionsSize
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Version of SonarQube image to deploy
+        displayName: Version
+        path: version
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      statusDescriptors:
+      - description: Status of pods
+        displayName: Pod Statuses
+        path: deployment
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:podStatuses
+      - description: Kubernetes service that can be used to expose SonarQubeServer
+        displayName: Service
+        path: service
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:Service
+      version: v1alpha1
+  description: |-
+    WIP
+    Creates SonarQube servers and clusters
   displayName: Sonarqube Operator
   icon:
   - base64data: ""
@@ -297,6 +427,7 @@ spec:
           - sonarsource.parflesh.github.io
           resources:
           - '*'
+          - sonarqubeservers
           verbs:
           - create
           - delete
@@ -319,8 +450,7 @@ spec:
   keywords:
   - SonarQube
   maintainers:
-  - email: parflesh@gmail.com
-    name: ParFlesh
+  - {}
   maturity: alpha
   provider:
     name: ParFlesh

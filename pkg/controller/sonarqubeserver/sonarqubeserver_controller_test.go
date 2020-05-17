@@ -1,8 +1,9 @@
-package sonarqube
+package sonarqubeserver
 
 import (
 	"context"
 	"fmt"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"testing"
@@ -22,9 +23,9 @@ const (
 	ReconcileErrorFormat string = "reconcile: (%v)"
 )
 
-// TestSonarQubeController runs ReconcileSonarQube.Reconcile() against a
-// fake client that tracks a SonarQube object.
-func TestSonarQubeController(t *testing.T) {
+// TestSonarQubeServerController runs ReconcileSonarQubeServer.Reconcile() against a
+// fake client that tracks a SonarQubeServer object.
+func TestSonarQubeServerController(t *testing.T) {
 	// Set the logger to development mode for verbose logs.
 	logf.SetLogger(logf.ZapLogger(true))
 
@@ -33,15 +34,13 @@ func TestSonarQubeController(t *testing.T) {
 		namespace = "sonarqube"
 	)
 
-	// A SonarQube resource with metadata and spec.
-	sonarqube := &sonarsourcev1alpha1.SonarQube{
+	// A SonarQubeServer resource with metadata and spec.
+	sonarqube := &sonarsourcev1alpha1.SonarQubeServer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: sonarsourcev1alpha1.SonarQubeSpec{
-			Size: 1,
-		},
+		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{},
 	}
 	// Objects to track in the fake client.
 	objs := []runtime.Object{
@@ -50,11 +49,11 @@ func TestSonarQubeController(t *testing.T) {
 
 	// Register operator types with the runtime scheme.
 	s := scheme.Scheme
-	s.AddKnownTypes(sonarsourcev1alpha1.SchemeGroupVersion, sonarqube, &sonarsourcev1alpha1.SonarQubeServer{})
+	s.AddKnownTypes(sonarsourcev1alpha1.SchemeGroupVersion, sonarqube)
 	// Create a fake client to mock API calls.
 	cl := fake.NewFakeClientWithScheme(s, objs...)
-	// Create a ReconcileSonarQube object with the scheme and fake client.
-	r := &ReconcileSonarQube{client: cl, scheme: s}
+	// Create a ReconcileSonarQubeServer object with the scheme and fake client.
+	r := &ReconcileSonarQubeServer{client: cl, scheme: s}
 
 	// Mock request to simulate Reconcile() being called on an event for a
 	// watched resource .
@@ -143,23 +142,20 @@ func TestSonarQubeController(t *testing.T) {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}
 
-	// Check for search sonarqube servers
-	for i := 0; i < 3; i++ {
-		res, err = r.Reconcile(req)
-		if err != nil {
-			t.Fatalf(ReconcileErrorFormat, err)
-		}
-		// Check the result of reconciliation to make sure it has the desired state.
-		if !res.Requeue {
-			t.Error("reconcile did not requeue")
-		}
-		sonarQubeServer := &sonarsourcev1alpha1.SonarQubeServer{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Search, i), Namespace: sonarqube.Namespace}, sonarQubeServer)
-		if err != nil && errors.IsNotFound(err) {
-			t.Errorf("reconcile: %s-%v sonarqube server not created", sonarsourcev1alpha1.Search, i)
-		} else if err != nil {
-			t.Fatalf(ReconcileErrorFormat, err)
-		}
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarqube.Spec.Storage.DataSize == "" {
+		t.Error("node data size not set to default")
 	}
 
 	res, err = r.Reconcile(req)
@@ -170,10 +166,79 @@ func TestSonarQubeController(t *testing.T) {
 	if !res.Requeue {
 		t.Error("reconcile did not requeue")
 	}
-	sonarQubeServer := &sonarsourcev1alpha1.SonarQubeServer{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Application, 0), Namespace: sonarqube.Namespace}, sonarQubeServer)
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		t.Errorf("condition progressing not set")
+	}
+	dataPVC := &corev1.PersistentVolumeClaim{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", sonarqube.Name, "data"), Namespace: namespace}, dataPVC)
 	if err != nil && errors.IsNotFound(err) {
-		t.Errorf("reconcile: %s sonarqube server not created", sonarsourcev1alpha1.Application)
+		t.Error("reconcile: data pvc not created")
+	} else if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarqube.Spec.Storage.DataSize == "" {
+		t.Error("node data size not set to default")
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		t.Errorf("condition progressing not set")
+	}
+	extensionsPVC := &corev1.PersistentVolumeClaim{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", sonarqube.Name, "extensions"), Namespace: namespace}, extensionsPVC)
+	if err != nil && errors.IsNotFound(err) {
+		t.Error("reconcile: extensions pvc not created")
+	} else if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+		t.Errorf("condition progressing not set")
+	}
+	deployment := &appsv1.Deployment{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: namespace}, deployment)
+	if err != nil && errors.IsNotFound(err) {
+		t.Error("reconcile: stateful set not created")
 	} else if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}

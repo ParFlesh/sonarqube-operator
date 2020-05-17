@@ -1,4 +1,4 @@
-package sonarqube
+package sonarqubeserver
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 	"testing"
 )
 
-// TestSonarQubeServiceAccount runs ReconcileSonarQube.ReconcileAppServiceAccount() against a
+// TestSonarQubeServerServiceAccount runs ReconcileSonarQubeServer.ReconcileAppServiceAccount() against a
 // fake client
-func TestSonarQubeServiceAccount(t *testing.T) {
+func TestSonarQubeServerServiceAccount(t *testing.T) {
 	// Set the logger to development mode for verbose logs.
 	logf.SetLogger(logf.ZapLogger(true))
 
@@ -26,13 +26,13 @@ func TestSonarQubeServiceAccount(t *testing.T) {
 		namespace = "sonarqube"
 	)
 
-	// A SonarQube resource with metadata and spec.
-	sonarqube := &sonarsourcev1alpha1.SonarQube{
+	// A SonarQubeServer resource with metadata and spec.
+	sonarqube := &sonarsourcev1alpha1.SonarQubeServer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: sonarsourcev1alpha1.SonarQubeSpec{},
+		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{},
 	}
 	// Objects to track in the fake client.
 	objs := []runtime.Object{
@@ -44,8 +44,8 @@ func TestSonarQubeServiceAccount(t *testing.T) {
 	s.AddKnownTypes(sonarsourcev1alpha1.SchemeGroupVersion, sonarqube)
 	// Create a fake client to mock API calls.
 	cl := fake.NewFakeClientWithScheme(s, objs...)
-	// Create a ReconcileSonarQube object with the scheme and fake client.
-	r := &ReconcileSonarQube{client: cl, scheme: s}
+	// Create a ReconcileSonarQubeServer object with the scheme and fake client.
+	r := &ReconcileSonarQubeServer{client: cl, scheme: s}
 
 	_, err := r.ReconcileServiceAccount(sonarqube)
 	if utils.ReasonForError(err) != utils.ErrorReasonResourceCreate {

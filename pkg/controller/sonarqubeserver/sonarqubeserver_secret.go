@@ -1,9 +1,8 @@
-package sonarqube
+package sonarqubeserver
 
 import (
 	"context"
 	"fmt"
-	"github.com/magiconair/properties"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +13,7 @@ import (
 	"strings"
 )
 
-// Reconciles Secret for SonarQube
+// Reconciles Secret for SonarQubeServer
 // Returns: Secret, Error
 // If Error is non-nil, Service is not in expected state
 // Errors:
@@ -22,13 +21,13 @@ import (
 //   ErrorReasonResourceCreate: returned when secret does not exists
 //   ErrorReasonResourceUpdate: returned when secret was updated to meet expected state
 //   ErrorReasonUnknown: returned when unhandled error from client occurs
-func (r *ReconcileSonarQube) ReconcileSecret(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Secret, error) {
+func (r *ReconcileSonarQubeServer) ReconcileSecret(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Secret, error) {
 	foundSecret, err := r.findSecret(cr)
 	if err != nil {
 		return foundSecret, err
 	}
 
-	if !isOwner(cr, foundSecret) {
+	if !utils.IsOwner(cr, foundSecret) {
 		annotations := foundSecret.GetAnnotations()
 		if val, ok := annotations[sonarsourcev1alpha1.SecretAnnotation]; ok && !strings.Contains(val, cr.Name) {
 			annotations[sonarsourcev1alpha1.SecretAnnotation] = fmt.Sprintf("%s,%s", val, cr.Name)
@@ -56,14 +55,10 @@ func (r *ReconcileSonarQube) ReconcileSecret(cr *sonarsourcev1alpha1.SonarQube) 
 		}
 	}
 
-	if err := r.verifyProperties(cr, foundSecret); err != nil {
-		return foundSecret, err
-	}
-
 	return foundSecret, nil
 }
 
-func (r *ReconcileSonarQube) findSecret(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Secret, error) {
+func (r *ReconcileSonarQubeServer) findSecret(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Secret, error) {
 	newSecret, err := r.newSecret(cr)
 	if err != nil {
 		return newSecret, err
@@ -87,7 +82,7 @@ func (r *ReconcileSonarQube) findSecret(cr *sonarsourcev1alpha1.SonarQube) (*cor
 	return foundSecret, nil
 }
 
-func (r *ReconcileSonarQube) newSecret(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Secret, error) {
+func (r *ReconcileSonarQubeServer) newSecret(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Secret, error) {
 	labels := r.Labels(cr)
 
 	dep := &corev1.Secret{
@@ -121,29 +116,4 @@ func (r *ReconcileSonarQube) newSecret(cr *sonarsourcev1alpha1.SonarQube) (*core
 	}
 
 	return dep, nil
-}
-
-func (r *ReconcileSonarQube) verifyProperties(cr *sonarsourcev1alpha1.SonarQube, s *corev1.Secret) error {
-	var sonarProperties *properties.Properties
-	var sonarPropertiesExists bool
-	if v, ok := s.Data["sonar.properties"]; ok {
-		sonarPropertiesExists = ok
-		sonarProperties, _ = properties.Load(v, properties.UTF8)
-	}
-
-	if cr.Spec.Clustered && sonarPropertiesExists {
-		if _, ok := sonarProperties.Get("sonar.jdbc.url"); !ok {
-			return &utils.Error{
-				Reason:  utils.ErrorReasonSpecInvalid,
-				Message: "clustering enabled but no jdbc configuration specified",
-			}
-		}
-	} else if cr.Spec.Clustered {
-		return &utils.Error{
-			Reason:  utils.ErrorReasonSpecInvalid,
-			Message: "clustering enabled but no jdbc configuration specified",
-		}
-	}
-
-	return nil
 }

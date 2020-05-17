@@ -3,22 +3,13 @@ package e2e
 import (
 	goctx "context"
 	"fmt"
-	"testing"
-	"time"
-
 	"github.com/parflesh/sonarqube-operator/pkg/apis"
 	operator "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
+	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	retryInterval        = time.Second * 5
-	timeout              = time.Second * 60
-	cleanupRetryInterval = time.Second * 1
-	cleanupTimeout       = time.Second * 5
 )
 
 func TestSonarQube(t *testing.T) {
@@ -29,12 +20,11 @@ func TestSonarQube(t *testing.T) {
 	}
 	// run subtests
 	t.Run("sonarqube-group", func(t *testing.T) {
-		t.Run("Cluster", SonarQubeCluster)
-		t.Run("Cluster2", SonarQubeCluster)
+		t.Run("Server", SonarQube)
 	})
 }
 
-func sonarqubeScaleTest(t *testing.T, f *framework.Framework, ctx *framework.Context) error {
+func sonarqubeDeployTest(t *testing.T, f *framework.Framework, ctx *framework.Context) error {
 	namespace, err := ctx.GetWatchNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace: %v", err)
@@ -45,7 +35,9 @@ func sonarqubeScaleTest(t *testing.T, f *framework.Framework, ctx *framework.Con
 			Name:      "example-sonarqube",
 			Namespace: namespace,
 		},
-		Spec: operator.SonarQubeSpec{},
+		Spec: operator.SonarQubeSpec{
+			Size: 1,
+		},
 	}
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
 	err = f.Client.Create(goctx.TODO(), exampleSonarQube, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -53,10 +45,24 @@ func sonarqubeScaleTest(t *testing.T, f *framework.Framework, ctx *framework.Con
 		return err
 	}
 
+	// Wait for search servers
+	for i := 0; i < 3; i++ {
+		err := e2eutil.WaitForDeployment(t, f.KubeClient, namespace, fmt.Sprintf("%s-%s-%v", exampleSonarQube.Name, operator.Search, i), 0, retryInterval, timeout)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, fmt.Sprintf("%s-%s-%v", exampleSonarQube.Name, operator.Application, 0), 0, retryInterval, timeout)
+	if err != nil {
+		return err
+	}
+
+	// wait for example-sonarqube to reach 1 replica
 	return nil
 }
 
-func SonarQubeCluster(t *testing.T) {
+func SonarQube(t *testing.T) {
 	t.Parallel()
 	ctx := framework.NewContext(t)
 	defer ctx.Cleanup()
@@ -77,7 +83,7 @@ func SonarQubeCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = sonarqubeScaleTest(t, f, ctx); err != nil {
+	if err = sonarqubeDeployTest(t, f, ctx); err != nil {
 		t.Fatal(err)
 	}
 }

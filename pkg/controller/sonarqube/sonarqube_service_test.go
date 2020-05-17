@@ -3,6 +3,7 @@ package sonarqube
 import (
 	"context"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
+	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ import (
 	"testing"
 )
 
-// TestSonarQubeService runs ReconcileSonarQube.ReconcileAppService() against a
+// TestSonarQubeService runs ReconcileSonarQube.ReconcileService() against a
 // fake client
 func TestSonarQubeService(t *testing.T) {
 	// Set the logger to development mode for verbose logs.
@@ -46,8 +47,8 @@ func TestSonarQubeService(t *testing.T) {
 	// Create a ReconcileSonarQube object with the scheme and fake client.
 	r := &ReconcileSonarQube{client: cl, scheme: s}
 
-	_, err := r.ReconcileAppService(sonarqube)
-	if ReasonForError(err) != ErrorReasonResourceCreate {
+	_, err := r.ReconcileService(sonarqube)
+	if utils.ReasonForError(err) != utils.ErrorReasonResourceCreate {
 		t.Error("reconcileService: resource created error not thrown when creating Service")
 	}
 	Service := &corev1.Service{}
@@ -58,7 +59,7 @@ func TestSonarQubeService(t *testing.T) {
 		t.Fatalf("reconcileService: (%v)", err)
 	}
 
-	Service, err = r.ReconcileAppService(sonarqube)
+	Service, err = r.ReconcileService(sonarqube)
 	if err != nil {
 		t.Error("reconcileService: returned error even though Service is in expected state")
 	}
