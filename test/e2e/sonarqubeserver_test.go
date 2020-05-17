@@ -63,7 +63,7 @@ func SonarQubeServer(t *testing.T) {
 	// get global framework variables
 	f := framework.Global
 	// wait for sonarqubeserver-operator to be ready
-	err = e2eutil.WaitForOperatorDeployment(t, f.KubeClient, namespace, "sonarqubeserver-operator", 1, retryInterval, timeout)
+	err = e2eutil.WaitForOperatorDeployment(t, f.KubeClient, namespace, "sonarqube-operator", 1, retryInterval, timeout)
 	if err != nil {
 		t.Fatal(err)
 	}

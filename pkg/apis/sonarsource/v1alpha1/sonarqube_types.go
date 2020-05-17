@@ -12,7 +12,7 @@ import (
 // SonarQubeSpec defines the desired state of SonarQube
 type SonarQubeSpec struct {
 
-	// Size of SonarQube Cluster (0 will shutdown application and search nodes)
+	// Number of SonarQube Compute Engines
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Size"
@@ -49,6 +49,13 @@ type SonarQubeSpec struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Clustered"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch,urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance"
 	Clustered bool `json:"clustered,omitempty"`
+
+	// Shutdown SonarQube cluster
+	// +optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Shutdown"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch,urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance"
+	Shutdown bool `json:"shutdown,omitempty"`
 
 	// Pod Configuration
 	// +optional
