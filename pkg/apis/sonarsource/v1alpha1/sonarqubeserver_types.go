@@ -17,7 +17,7 @@ type SonarQubeServerSpec struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Size"
 	// +kubebuilder:validation:Default=1
-	Size *int32 `json:"size,omitempty"`
+	Size int32 `json:"size,omitempty"`
 
 	// Version of SonarQube image to deploy
 	// +optional

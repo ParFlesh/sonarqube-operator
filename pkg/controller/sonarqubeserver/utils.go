@@ -36,7 +36,7 @@ func (r *ReconcileSonarQubeServer) ParseErrorForReconcileResult(cr *sonarsourcev
 	if err != nil && utils.ReasonForError(err) != utils.ErrorReasonUnknown {
 		sqErr := err.(*utils.Error)
 		switch sqErr.Type() {
-		case utils.ErrorReasonSpecUpdate, utils.ErrorReasonResourceCreate:
+		case utils.ErrorReasonSpecUpdate, utils.ErrorReasonResourceCreate, utils.ErrorReasonResourceUpdate, utils.ErrorReasonResourceWaiting:
 			newStatus.Conditions.SetCondition(status.Condition{
 				Type:    sonarsourcev1alpha1.ConditionProgressing,
 				Status:  corev1.ConditionTrue,
@@ -58,7 +58,7 @@ func (r *ReconcileSonarQubeServer) ParseErrorForReconcileResult(cr *sonarsourcev
 			r.updateStatus(&newStatus, cr)
 			reqLogger.Info(sqErr.Error())
 			return reconcile.Result{Requeue: true}, nil
-		case utils.ErrorReasonSpecInvalid:
+		case utils.ErrorReasonSpecInvalid, utils.ErrorReasonResourceInvalid:
 			newStatus.Conditions.SetCondition(status.Condition{
 				Type:    sonarsourcev1alpha1.ConditionInvalid,
 				Status:  corev1.ConditionTrue,

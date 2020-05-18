@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"github.com/magiconair/properties"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,4 +36,13 @@ func GetProperties(s *corev1.Secret, f string) (*properties.Properties, error) {
 			Message: fmt.Sprintf("%s doesn't exist in secret %s", f, s.Name),
 		}
 	}
+}
+
+func GetDeploymentCondition(deployment *appsv1.Deployment, condition appsv1.DeploymentConditionType) corev1.ConditionStatus {
+	for _, v := range deployment.Status.Conditions {
+		if v.Type == condition {
+			return v.Status
+		}
+	}
+	return corev1.ConditionUnknown
 }

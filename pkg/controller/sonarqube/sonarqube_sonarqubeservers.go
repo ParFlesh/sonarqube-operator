@@ -5,9 +5,11 @@ import (
 	"fmt"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -55,6 +57,11 @@ func (r *ReconcileSonarQube) findSonarQubeServers(cr *sonarsourcev1alpha1.SonarQ
 		}
 	}
 
+	err = r.verifySonarQubeServers(cr, sonarQubeServers)
+	if err != nil {
+		return sonarQubeServers, err
+	}
+
 	return sonarQubeServers, nil
 }
 
@@ -97,7 +104,7 @@ func (r *ReconcileSonarQube) newSonarQubeServer(cr *sonarsourcev1alpha1.SonarQub
 			Labels:    labels,
 		},
 		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-			Size:        &[]int32{0}[0],
+			Size:        0,
 			Version:     cr.Spec.Version,
 			Image:       cr.Spec.Image,
 			Secret:      cr.Spec.Secret,
@@ -116,4 +123,144 @@ func (r *ReconcileSonarQube) newSonarQubeServer(cr *sonarsourcev1alpha1.SonarQub
 	}
 
 	return dep, nil
+}
+
+func (r *ReconcileSonarQube) verifySonarQubeServers(cr *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
+	// Wait for all resources to be ready and valid to continue
+
+	for t, l := range s {
+		for _, v := range l {
+			if !v.Status.Conditions.IsFalseFor(sonarsourcev1alpha1.ConditionProgressing) && !v.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
+				return &utils.Error{
+					Reason:  utils.ErrorReasonResourceWaiting,
+					Message: fmt.Sprintf("waiting for %s node %s to finish startup", t, v.Name),
+				}
+			} else if v.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
+				return &utils.Error{
+					Reason:  utils.ErrorReasonResourceInvalid,
+					Message: fmt.Sprintf("%s node %s is invalid: %s", t, v.Name, v.Status.Conditions.GetCondition(sonarsourcev1alpha1.ConditionInvalid).Message),
+				}
+			}
+		}
+	}
+
+	err := r.verifySonarQubeServersSearchHosts(cr, s)
+	if err != nil {
+		return err
+	}
+
+	if cr.Spec.Shutdown {
+		err := r.shutdownCluster(cr, s)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := r.startupCluster(cr, s)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *ReconcileSonarQube) shutdownCluster(cr *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
+	return nil
+}
+
+func (r *ReconcileSonarQube) startupCluster(cr *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
+	for _, v := range s[sonarsourcev1alpha1.Search] {
+		if v.Spec.Size != 1 {
+			v.Spec.Size = 1
+			err := r.client.Update(context.TODO(), v)
+			if err != nil {
+				return err
+			}
+			return &utils.Error{
+				Reason:  utils.ErrorReasonResourceUpdate,
+				Message: fmt.Sprintf("starting sonarqube server %s", v.Name),
+			}
+		}
+	}
+
+	for _, v := range s[sonarsourcev1alpha1.Application] {
+		if v.Spec.Size != 1 {
+			v.Spec.Size = 1
+			err := r.client.Update(context.TODO(), v)
+			if err != nil {
+				return err
+			}
+			return &utils.Error{
+				Reason:  utils.ErrorReasonResourceUpdate,
+				Message: fmt.Sprintf("starting sonarqube server %s", v.Name),
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *ReconcileSonarQube) getSonarQubeServersClusterIP(s []*sonarsourcev1alpha1.SonarQubeServer) ([]string, error) {
+	var ips []string
+
+	for _, v := range s {
+		if v.Status.Service == "" {
+			return ips, &utils.Error{
+				Reason:  utils.ErrorReasonResourceWaiting,
+				Message: fmt.Sprintf("Waiting on service for %s", v.Name),
+			}
+		}
+		service := &corev1.Service{}
+		err := r.client.Get(context.TODO(), types.NamespacedName{Name: v.Status.Service, Namespace: v.Namespace}, service)
+		if err != nil && errors.IsNotFound(err) {
+			return ips, &utils.Error{
+				Reason:  utils.ErrorReasonResourceWaiting,
+				Message: fmt.Sprintf("Waiting on service for %s", v.Name),
+			}
+		} else if err != nil {
+			return ips, err
+		}
+		if service.Spec.ClusterIP == "" {
+			return ips, &utils.Error{
+				Reason:  utils.ErrorReasonResourceWaiting,
+				Message: fmt.Sprintf("Waiting on service for %s", v.Name),
+			}
+		}
+		ips = append(ips, service.Spec.ClusterIP)
+	}
+
+	return ips, nil
+}
+
+func (r *ReconcileSonarQube) verifySonarQubeServersSearchHosts(cr *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
+	searchServiceIPS, err := r.getSonarQubeServersClusterIP(s[sonarsourcev1alpha1.Search])
+	if err != nil {
+		return err
+	}
+
+	applicationServiceIPS, err := r.getSonarQubeServersClusterIP(s[sonarsourcev1alpha1.Application])
+	if err != nil {
+		return err
+	}
+
+	for t, l := range s {
+		for _, v := range l {
+			if !reflect.DeepEqual(v.Spec.SearchHosts, searchServiceIPS) {
+				v.Spec.SearchHosts = searchServiceIPS
+				err := r.client.Update(context.TODO(), v)
+				if err != nil {
+					return err
+				}
+			}
+			if t == sonarsourcev1alpha1.Application && !reflect.DeepEqual(v.Spec.Hosts, applicationServiceIPS) {
+				v.Spec.Hosts = applicationServiceIPS
+				err := r.client.Update(context.TODO(), v)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }

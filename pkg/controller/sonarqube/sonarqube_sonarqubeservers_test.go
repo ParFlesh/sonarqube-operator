@@ -3,8 +3,10 @@ package sonarqube
 import (
 	"context"
 	"fmt"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,7 +45,7 @@ func TestSonarQubeSonarQubeServers(t *testing.T) {
 
 	// Register operator types with the runtime scheme.
 	s := scheme.Scheme
-	s.AddKnownTypes(sonarsourcev1alpha1.SchemeGroupVersion, sonarqube)
+	s.AddKnownTypes(sonarsourcev1alpha1.SchemeGroupVersion, sonarqube, &sonarsourcev1alpha1.SonarQubeServer{})
 	// Create a fake client to mock API calls.
 	cl := fake.NewFakeClientWithScheme(s, objs...)
 	// Create a ReconcileSonarQube object with the scheme and fake client.
@@ -61,8 +63,50 @@ func TestSonarQubeSonarQubeServers(t *testing.T) {
 
 	// Loop until no more errors or non-handled error
 	for {
-		_, err := r.ReconcileSonarQubeServers(sonarqube)
-		if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
+		servers, err := r.ReconcileSonarQubeServers(sonarqube)
+		if err != nil && utils.ReasonForError(err) == utils.ErrorReasonResourceWaiting {
+			// Create service and set cluster ip
+			for _, l := range servers {
+				for _, v := range l {
+					if v.Status.Service == "" {
+						v.Status.Service = v.Name
+						service := &corev1.Service{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      v.Name,
+								Namespace: v.Namespace,
+							},
+							Spec: corev1.ServiceSpec{
+								ClusterIP: "127.0.0.1",
+							},
+						}
+						err := r.client.Create(context.TODO(), service)
+						if err != nil {
+							t.Fatalf("reconcileSonarQubeServers: (%v)", err)
+						}
+						err = r.client.Update(context.TODO(), v)
+						if err != nil {
+							t.Fatalf("reconcileSonarQubeServers: (%v)", err)
+						}
+					}
+				}
+			}
+
+			// Set progressing to false as servers are created
+			for _, l := range servers {
+				for _, v := range l {
+					if !v.Status.Conditions.IsFalseFor(sonarsourcev1alpha1.ConditionProgressing) {
+						v.Status.Conditions.SetCondition(status.Condition{
+							Type:   sonarsourcev1alpha1.ConditionProgressing,
+							Status: corev1.ConditionFalse,
+						})
+						err := r.client.Update(context.TODO(), v)
+						if err != nil {
+							t.Fatalf("reconcileSonarQubeServers: (%v)", err)
+						}
+					}
+				}
+			}
+		} else if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
 			t.Fatalf("reconcileServiceAccount: (%v)", err)
 		} else if err == nil {
 			break

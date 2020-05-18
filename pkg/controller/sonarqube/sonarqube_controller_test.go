@@ -3,6 +3,7 @@ package sonarqube
 import (
 	"context"
 	"fmt"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"testing"
@@ -215,6 +216,120 @@ func TestSonarQubeController(t *testing.T) {
 		t.Errorf("reconcile: %s sonarqube server not created", sonarsourcev1alpha1.Application)
 	} else if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile requeued even though resources are starting")
+	}
+
+	for i := 0; i < 3; i++ {
+		sonarQubeServer := &sonarsourcev1alpha1.SonarQubeServer{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Search, i), Namespace: sonarqube.Namespace}, sonarQubeServer)
+		if err != nil {
+			t.Fatalf(ReconcileErrorFormat, err)
+		}
+		sonarQubeServer.Status.Conditions.SetCondition(status.Condition{
+			Type:   sonarsourcev1alpha1.ConditionProgressing,
+			Status: corev1.ConditionFalse,
+		})
+		err = r.client.Status().Update(context.TODO(), sonarQubeServer)
+		if err != nil {
+			t.Fatalf(ReconcileErrorFormat, err)
+		}
+	}
+
+	sonarQubeServer = &sonarsourcev1alpha1.SonarQubeServer{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Application, 0), Namespace: sonarqube.Namespace}, sonarQubeServer)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	sonarQubeServer.Status.Conditions.SetCondition(status.Condition{
+		Type:   sonarsourcev1alpha1.ConditionProgressing,
+		Status: corev1.ConditionFalse,
+	})
+	err = r.client.Status().Update(context.TODO(), sonarQubeServer)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile requeued even though the services aren't ready")
+	}
+
+	for i := 0; i < 3; i++ {
+		sonarQubeServer := &sonarsourcev1alpha1.SonarQubeServer{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Search, i), Namespace: sonarqube.Namespace}, sonarQubeServer)
+		if err != nil {
+			t.Fatalf(ReconcileErrorFormat, err)
+		}
+		if sonarQubeServer.Status.Service == "" {
+			sonarQubeServer.Status.Service = sonarQubeServer.Name
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      sonarQubeServer.Name,
+					Namespace: sonarQubeServer.Namespace,
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "127.0.0.1",
+				},
+			}
+			err := r.client.Create(context.TODO(), service)
+			if err != nil {
+				t.Fatalf("reconcileSonarQubeServers: (%v)", err)
+			}
+			err = r.client.Update(context.TODO(), sonarQubeServer)
+			if err != nil {
+				t.Fatalf("reconcileSonarQubeServers: (%v)", err)
+			}
+		}
+	}
+
+	sonarQubeServer = &sonarsourcev1alpha1.SonarQubeServer{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s-%v", sonarqube.Name, sonarsourcev1alpha1.Application, 0), Namespace: sonarqube.Namespace}, sonarQubeServer)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarQubeServer.Status.Service == "" {
+		sonarQubeServer.Status.Service = sonarQubeServer.Name
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      sonarQubeServer.Name,
+				Namespace: sonarQubeServer.Namespace,
+			},
+			Spec: corev1.ServiceSpec{
+				ClusterIP: "127.0.0.1",
+			},
+		}
+		err := r.client.Create(context.TODO(), service)
+		if err != nil {
+			t.Fatalf("reconcileSonarQubeServers: (%v)", err)
+		}
+		err = r.client.Update(context.TODO(), sonarQubeServer)
+		if err != nil {
+			t.Fatalf("reconcileSonarQubeServers: (%v)", err)
+		}
+	}
+
+	// Start the servers
+	for i := 0; i < 4; i++ {
+		res, err = r.Reconcile(req)
+		if err != nil {
+			t.Fatalf(ReconcileErrorFormat, err)
+		}
+		// Check the result of reconciliation to make sure it has the desired state.
+		if !res.Requeue {
+			t.Error("reconcile requeued even though the services aren't ready")
+		}
 	}
 
 	res, err = r.Reconcile(req)

@@ -19,7 +19,7 @@ func TestSonarQubeServer(t *testing.T) {
 		t.Fatalf("failed to add custom resource scheme to framework: %v", err)
 	}
 	// run subtests
-	t.Run("sonarqubeserver-group", func(t *testing.T) {
+	t.Run("0-sonarqubeserver-group", func(t *testing.T) {
 		t.Run("Server", SonarQubeServer)
 	})
 }
@@ -35,7 +35,9 @@ func sonarqubeserverDeployTest(t *testing.T, f *framework.Framework, ctx *framew
 			Name:      "example-sonarqubeserver",
 			Namespace: namespace,
 		},
-		Spec: operator.SonarQubeServerSpec{},
+		Spec: operator.SonarQubeServerSpec{
+			Size: 1,
+		},
 	}
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
 	err = f.Client.Create(goctx.TODO(), exampleSonarQubeServer, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})

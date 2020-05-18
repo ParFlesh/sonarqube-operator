@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 )
@@ -67,6 +68,30 @@ func (r *ReconcileSonarQubeServer) findDeployment(cr *sonarsourcev1alpha1.SonarQ
 		return newDeployment, err
 	}
 
+	err = r.verifyDeployment(cr, foundDeployment)
+	if err != nil {
+		return foundDeployment, err
+	}
+
+	newStatus := &sonarsourcev1alpha1.SonarQubeServerStatus{}
+	*newStatus = cr.Status
+
+	newStatus.Deployment = r.getDeploymentStatus(foundDeployment)
+	r.updateStatus(newStatus, cr)
+
+	if len(newStatus.Deployment[appsv1.DeploymentReplicaFailure]) > 0 {
+		return foundDeployment, &utils.Error{
+			Reason:  utils.ErrorReasonResourceInvalid,
+			Message: "deployment replica failure",
+		}
+	}
+	if *foundDeployment.Spec.Replicas > 0 && len(newStatus.Deployment[appsv1.DeploymentAvailable]) == 0 {
+		return foundDeployment, &utils.Error{
+			Reason:  utils.ErrorReasonResourceWaiting,
+			Message: "waiting for deployment to be available and not progressing",
+		}
+	}
+
 	return foundDeployment, nil
 }
 
@@ -91,7 +116,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RecreateDeploymentStrategyType,
 			},
-			Replicas: cr.Spec.Size,
+			Replicas: &cr.Spec.Size,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podLabels,
 			},
@@ -193,9 +218,18 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 							LivenessProbe: &corev1.Probe{
 								Handler:             corev1.Handler{},
 								InitialDelaySeconds: 60,
+								TimeoutSeconds:      1,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
 							},
 							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{},
+								Handler:             corev1.Handler{},
+								InitialDelaySeconds: 0,
+								TimeoutSeconds:      1,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
 							},
 							ImagePullPolicy: corev1.PullAlways,
 						},
@@ -239,6 +273,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				IntVal: ApplicationWebPort,
 				StrVal: "",
 			},
+			Scheme: corev1.URISchemeHTTP,
 		}
 	case sonarsourcev1alpha1.Application:
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
@@ -284,6 +319,19 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				Name:  "SONAR_CLUSTER_HOSTS",
 				Value: strings.Join(hosts, ","),
 			},
+			{
+				Name: "SONAR_CLUSTER_NODE_HOST",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "status.podIP",
+					},
+				},
+			},
+			{
+				Name:  "SONAR_CLUSTER_NODE_NAME",
+				Value: dep.Name,
+			},
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, clusteredEnv...)
 		dep.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
@@ -300,6 +348,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				IntVal: ApplicationWebPort,
 				StrVal: "",
 			},
+			Scheme: corev1.URISchemeHTTP,
 		}
 	case sonarsourcev1alpha1.Search:
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
@@ -324,12 +373,30 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				Value: string(cr.Spec.Type),
 			},
 			{
-				Name:  "SONAR_CLUSTER_SEARCH_HOSTS",
-				Value: strings.Join(cr.Spec.SearchHosts, ","),
+				Name: "SONAR_CLUSTER_NODE_HOST",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "status.podIP",
+					},
+				},
 			},
 			{
-				Name:  "SONAR_SEARCH_HOST",
-				Value: service.Spec.ClusterIP,
+				Name:  "SONAR_CLUSTER_NODE_NAME",
+				Value: dep.Name,
+			},
+			{
+				Name:  "SONAR_CLUSTER_SEARCH_HOSTS",
+				Value: strings.Join(searchHosts, ","),
+			},
+			{
+				Name: "SONAR_SEARCH_HOST",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "status.podIP",
+					},
+				},
 			},
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, clusteredEnv...)
@@ -340,8 +407,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				StrVal: "",
 			},
 		}
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet = &corev1.HTTPGetAction{
-			Path: "/_cluster/health?wait_for_status=green&timeout=1s",
+		dep.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
 				IntVal: SearchPort,
@@ -380,4 +446,123 @@ func (r *ReconcileSonarQubeServer) getDeploymentDeps(cr *sonarsourcev1alpha1.Son
 	}
 
 	return serviceAccount, secret, pvcs, service, nil
+}
+
+func (r *ReconcileSonarQubeServer) verifyDeployment(cr *sonarsourcev1alpha1.SonarQubeServer, deployment *appsv1.Deployment) error {
+	newDeployment, err := r.newDeployment(cr)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(*deployment.Spec.Replicas, cr.Spec.Size) {
+		deployment.Spec.Replicas = &cr.Spec.Size
+		err := r.client.Update(context.TODO(), deployment)
+		if err != nil {
+			return err
+		}
+		return &utils.Error{
+			Reason:  utils.ErrorReasonResourceUpdate,
+			Message: fmt.Sprintf("set deployment replicas to %v", *deployment.Spec.Replicas),
+		}
+	}
+
+	var updateEnv bool
+	for _, c := range deployment.Spec.Template.Spec.Containers[0].Env {
+		if updateEnv {
+			break
+		}
+		var found bool
+		for _, p := range newDeployment.Spec.Template.Spec.Containers[0].Env {
+			if c.Name == p.Name {
+				found = true
+				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
+					updateEnv = true
+					break
+				}
+				break
+			}
+		}
+		if !found {
+			updateEnv = true
+			break
+		}
+	}
+	for _, p := range newDeployment.Spec.Template.Spec.Containers[0].Env {
+		var found bool
+		for _, c := range deployment.Spec.Template.Spec.Containers[0].Env {
+			if c.Name == p.Name {
+				found = true
+				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
+					updateEnv = true
+					break
+				}
+				break
+			}
+		}
+		if !found {
+			updateEnv = true
+			break
+		}
+	}
+	if updateEnv {
+		deployment.Spec.Template.Spec.Containers[0].Env = newDeployment.Spec.Template.Spec.Containers[0].Env
+		err := r.client.Update(context.TODO(), deployment)
+		if err != nil {
+			return err
+		}
+		return &utils.Error{
+			Reason:  utils.ErrorReasonResourceUpdate,
+			Message: "updated deployment env",
+		}
+	}
+
+	if !reflect.DeepEqual(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe, newDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe) {
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = newDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe
+		err := r.client.Update(context.TODO(), deployment)
+		if err != nil {
+			return err
+		}
+		return &utils.Error{
+			Reason:  utils.ErrorReasonResourceUpdate,
+			Message: "updated deployment readiness probe",
+		}
+	}
+
+	if !reflect.DeepEqual(deployment.Spec.Template.Spec.Containers[0].LivenessProbe, newDeployment.Spec.Template.Spec.Containers[0].LivenessProbe) {
+		deployment.Spec.Template.Spec.Containers[0].LivenessProbe = newDeployment.Spec.Template.Spec.Containers[0].LivenessProbe
+		err := r.client.Update(context.TODO(), deployment)
+		if err != nil {
+			return err
+		}
+		return &utils.Error{
+			Reason:  utils.ErrorReasonResourceUpdate,
+			Message: "updated deployment liveness probe",
+		}
+	}
+
+	return nil
+}
+
+func (r *ReconcileSonarQubeServer) getDeploymentStatus(deployment *appsv1.Deployment) sonarsourcev1alpha1.DeploymentStatus {
+	status := sonarsourcev1alpha1.DeploymentStatus{
+		appsv1.DeploymentAvailable:      []string{},
+		appsv1.DeploymentProgressing:    []string{},
+		appsv1.DeploymentReplicaFailure: []string{},
+	}
+
+	if utils.GetDeploymentCondition(deployment, appsv1.DeploymentAvailable) == corev1.ConditionTrue {
+		status[appsv1.DeploymentAvailable] = []string{deployment.Name}
+		return status
+	}
+
+	if utils.GetDeploymentCondition(deployment, appsv1.DeploymentReplicaFailure) == corev1.ConditionTrue {
+		status[appsv1.DeploymentReplicaFailure] = []string{deployment.Name}
+		return status
+	}
+
+	if utils.GetDeploymentCondition(deployment, appsv1.DeploymentProgressing) == corev1.ConditionTrue {
+		status[appsv1.DeploymentProgressing] = []string{deployment.Name}
+		return status
+	}
+
+	return status
 }
