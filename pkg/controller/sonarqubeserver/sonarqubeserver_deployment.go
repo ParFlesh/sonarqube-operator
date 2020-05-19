@@ -507,39 +507,46 @@ func (r *ReconcileSonarQubeServer) getDeploymentStatus(deployment *appsv1.Deploy
 }
 
 func (r *ReconcileSonarQubeServer) envEqual(c, p []corev1.EnvVar) bool {
+	equal := true
 	for _, c := range c {
+		if !equal {
+			break
+		}
 		var found bool
 		for _, p := range p {
 			if c.Name == p.Name {
 				found = true
 				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
-					return false
+					equal = false
 					break
 				}
 				break
 			}
 		}
 		if !found {
-			return false
+			equal = false
 			break
 		}
 	}
 	for _, p := range p {
+		if !equal {
+			break
+		}
 		var found bool
 		for _, c := range c {
 			if c.Name == p.Name {
 				found = true
 				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
-					return false
+					equal = false
 					break
 				}
 				break
 			}
 		}
 		if !found {
-			return false
+			equal = false
 			break
 		}
 	}
-	return true
+	return equal
 }
