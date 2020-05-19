@@ -28,4 +28,4 @@ jobs:
         run: go build -o build/_output/bin/sonarqube-operator github.com/parflesh/sonarqube-operator/cmd/manager
 
       - name: Test
-        run: go test -v github.com/parflesh/sonarqube-operator/pkg
+        run: go test -v ./pkg/...
