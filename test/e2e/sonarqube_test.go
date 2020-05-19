@@ -24,7 +24,7 @@ func TestSonarQube(t *testing.T) {
 		t.Fatalf("failed to add custom resource scheme to framework: %v", err)
 	}
 	// run subtests
-	t.Run("1-sonarqube-group", func(t *testing.T) {
+	t.Run("sonarqube-group", func(t *testing.T) {
 		t.Run("Server", SonarQube)
 	})
 }
