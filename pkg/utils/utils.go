@@ -1,11 +1,14 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"github.com/magiconair/properties"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func IsOwner(owner, child metav1.Object) bool {
@@ -45,4 +48,15 @@ func GetDeploymentCondition(deployment *appsv1.Deployment, condition appsv1.Depl
 		}
 	}
 	return corev1.ConditionUnknown
+}
+
+func UpdateResource(client client.Writer, object runtime.Object, reason ErrorType, message string) error {
+	err := client.Update(context.TODO(), object)
+	if err != nil {
+		return err
+	}
+	return &Error{
+		Reason:  reason,
+		Message: message,
+	}
 }

@@ -26,8 +26,7 @@ func (r *ReconcileSonarQubeServer) ReconcilePVCs(cr *sonarsourcev1alpha1.SonarQu
 		return pvcs, err
 	}
 
-	newStatus := &sonarsourcev1alpha1.SonarQubeServerStatus{}
-	*newStatus = cr.Status
+	newStatus := cr.Status.DeepCopy()
 
 	r.updateStatus(newStatus, cr)
 	return pvcs, nil
@@ -93,14 +92,7 @@ func (r *ReconcileSonarQubeServer) newPVC(cr *sonarsourcev1alpha1.SonarQubeServe
 	case VolumeData:
 		if cr.Spec.Storage.DataSize == "" {
 			cr.Spec.Storage.DataSize = DefaultVolumeSize
-			err := r.client.Update(context.TODO(), cr)
-			if err != nil {
-				return nil, err
-			}
-			return nil, &utils.Error{
-				Reason:  utils.ErrorReasonSpecUpdate,
-				Message: "updated data storage size",
-			}
+			return nil, utils.UpdateResource(r.client, cr, utils.ErrorReasonSpecUpdate, "updated data storage size")
 		}
 		dep.Spec.StorageClassName = cr.Spec.Storage.DataClass
 		if size, err := resource.ParseQuantity(cr.Spec.Storage.DataSize); err != nil {
@@ -111,14 +103,7 @@ func (r *ReconcileSonarQubeServer) newPVC(cr *sonarsourcev1alpha1.SonarQubeServe
 	case VolumeExtensions:
 		if cr.Spec.Storage.ExtensionsSize == "" {
 			cr.Spec.Storage.ExtensionsSize = DefaultVolumeSize
-			err := r.client.Update(context.TODO(), cr)
-			if err != nil {
-				return nil, err
-			}
-			return nil, &utils.Error{
-				Reason:  utils.ErrorReasonSpecUpdate,
-				Message: "updated extensions storage size",
-			}
+			return nil, utils.UpdateResource(r.client, cr, utils.ErrorReasonSpecUpdate, "updated extensions storage size")
 		}
 		dep.Spec.StorageClassName = cr.Spec.Storage.ExtensionsClass
 		if size, err := resource.ParseQuantity(cr.Spec.Storage.ExtensionsSize); err != nil {

@@ -36,26 +36,14 @@ func (r *ReconcileSonarQube) ReconcileSecret(cr *sonarsourcev1alpha1.SonarQube) 
 		if val, ok := annotations[sonarsourcev1alpha1.SecretAnnotation]; ok && !strings.Contains(val, cr.Name) {
 			annotations[sonarsourcev1alpha1.SecretAnnotation] = fmt.Sprintf("%s,%s", val, cr.Name)
 			foundSecret.SetAnnotations(annotations)
-			if err := r.client.Update(context.TODO(), foundSecret); err != nil {
-				return foundSecret, err
-			}
-			return foundSecret, &utils.Error{
-				Reason:  utils.ErrorReasonResourceUpdate,
-				Message: "secret annotations updated",
-			}
+			return foundSecret, utils.UpdateResource(r.client, foundSecret, utils.ErrorReasonResourceUpdate, "updated secret annotation")
 		} else if !ok {
 			if annotations == nil {
 				annotations = make(map[string]string)
 			}
 			annotations[sonarsourcev1alpha1.SecretAnnotation] = cr.Name
 			foundSecret.SetAnnotations(annotations)
-			if err := r.client.Update(context.TODO(), foundSecret); err != nil {
-				return foundSecret, err
-			}
-			return foundSecret, &utils.Error{
-				Reason:  utils.ErrorReasonResourceUpdate,
-				Message: "secret annotations updated",
-			}
+			return foundSecret, utils.UpdateResource(r.client, foundSecret, utils.ErrorReasonResourceUpdate, "updated secret annotation")
 		}
 	}
 
@@ -108,14 +96,7 @@ func (r *ReconcileSonarQube) newSecret(cr *sonarsourcev1alpha1.SonarQube) (*core
 
 	if cr.Spec.Secret == "" {
 		cr.Spec.Secret = fmt.Sprintf("%s-config", cr.Name)
-		err := r.client.Update(context.TODO(), cr)
-		if err != nil {
-			return dep, err
-		}
-		return dep, &utils.Error{
-			Reason:  utils.ErrorReasonSpecUpdate,
-			Message: "updated secret",
-		}
+		return dep, utils.UpdateResource(r.client, cr, utils.ErrorReasonSpecUpdate, "updated secret")
 	}
 
 	dep.Name = cr.Spec.Secret
@@ -156,15 +137,7 @@ func (r *ReconcileSonarQube) verifySecret(cr *sonarsourcev1alpha1.SonarQube, s *
 		s.Data["sonar.properties"] = append(s.Data["sonar.properties"], "\nsonar.auth.jwtBase64Hs256Secret="...)
 		s.Data["sonar.properties"] = append(s.Data["sonar.properties"], sha...)
 
-		err := r.client.Update(context.TODO(), s)
-		if err != nil {
-			return err
-		}
-
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: fmt.Sprintf("added sonar.auth.jwtBase64Hs256Secret to sonar.properties in %s", s.Name),
-		}
+		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, fmt.Sprintf("added sonar.auth.jwtBase64Hs256Secret to sonar.properties in %s", s.Name))
 	} else if !ok {
 		// Don't make changes to unowned resources
 		return &utils.Error{

@@ -73,8 +73,7 @@ func (r *ReconcileSonarQubeServer) findDeployment(cr *sonarsourcev1alpha1.SonarQ
 		return foundDeployment, err
 	}
 
-	newStatus := &sonarsourcev1alpha1.SonarQubeServerStatus{}
-	*newStatus = cr.Status
+	newStatus := cr.Status.DeepCopy()
 
 	newStatus.Deployment = r.getDeploymentStatus(foundDeployment)
 	r.updateStatus(newStatus, cr)
@@ -453,90 +452,30 @@ func (r *ReconcileSonarQubeServer) verifyDeployment(cr *sonarsourcev1alpha1.Sona
 	if err != nil {
 		return err
 	}
+
 	if !reflect.DeepEqual(*deployment.Spec.Replicas, cr.Spec.Size) {
 		deployment.Spec.Replicas = &cr.Spec.Size
-		err := r.client.Update(context.TODO(), deployment)
-		if err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: fmt.Sprintf("set deployment replicas to %v", *deployment.Spec.Replicas),
-		}
+		return utils.UpdateResource(r.client, deployment, utils.ErrorReasonResourceUpdate, "updated deployment replicas")
 	}
 
-	var updateEnv bool
-	for _, c := range deployment.Spec.Template.Spec.Containers[0].Env {
-		if updateEnv {
-			break
-		}
-		var found bool
-		for _, p := range newDeployment.Spec.Template.Spec.Containers[0].Env {
-			if c.Name == p.Name {
-				found = true
-				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
-					updateEnv = true
-					break
-				}
-				break
-			}
-		}
-		if !found {
-			updateEnv = true
-			break
-		}
-	}
-	for _, p := range newDeployment.Spec.Template.Spec.Containers[0].Env {
-		var found bool
-		for _, c := range deployment.Spec.Template.Spec.Containers[0].Env {
-			if c.Name == p.Name {
-				found = true
-				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
-					updateEnv = true
-					break
-				}
-				break
-			}
-		}
-		if !found {
-			updateEnv = true
-			break
-		}
-	}
-	if updateEnv {
+	if !r.envEqual(newDeployment.Spec.Template.Spec.Containers[0].Env, deployment.Spec.Template.Spec.Containers[0].Env) {
 		deployment.Spec.Template.Spec.Containers[0].Env = newDeployment.Spec.Template.Spec.Containers[0].Env
-		err := r.client.Update(context.TODO(), deployment)
-		if err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: "updated deployment env",
-		}
+		return utils.UpdateResource(r.client, deployment, utils.ErrorReasonResourceUpdate, "updated deployment env")
 	}
 
 	if !reflect.DeepEqual(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe, newDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe) {
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = newDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe
-		err := r.client.Update(context.TODO(), deployment)
-		if err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: "updated deployment readiness probe",
-		}
+		return utils.UpdateResource(r.client, deployment, utils.ErrorReasonResourceUpdate, "updated deployment readiness probe")
 	}
 
 	if !reflect.DeepEqual(deployment.Spec.Template.Spec.Containers[0].LivenessProbe, newDeployment.Spec.Template.Spec.Containers[0].LivenessProbe) {
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe = newDeployment.Spec.Template.Spec.Containers[0].LivenessProbe
-		err := r.client.Update(context.TODO(), deployment)
-		if err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: "updated deployment liveness probe",
-		}
+		return utils.UpdateResource(r.client, deployment, utils.ErrorReasonResourceUpdate, "updated deployment liveness probe")
+	}
+
+	if !reflect.DeepEqual(deployment.Labels, newDeployment.Labels) {
+		deployment.Labels = newDeployment.Labels
+		return utils.UpdateResource(r.client, deployment, utils.ErrorReasonResourceUpdate, "updated deployment labels")
 	}
 
 	return nil
@@ -565,4 +504,42 @@ func (r *ReconcileSonarQubeServer) getDeploymentStatus(deployment *appsv1.Deploy
 	}
 
 	return status
+}
+
+func (r *ReconcileSonarQubeServer) envEqual(c, p []corev1.EnvVar) bool {
+	for _, c := range c {
+		var found bool
+		for _, p := range p {
+			if c.Name == p.Name {
+				found = true
+				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
+					return false
+					break
+				}
+				break
+			}
+		}
+		if !found {
+			return false
+			break
+		}
+	}
+	for _, p := range p {
+		var found bool
+		for _, c := range c {
+			if c.Name == p.Name {
+				found = true
+				if !reflect.DeepEqual(c.ValueFrom, p.ValueFrom) || c.Value != p.Value {
+					return false
+					break
+				}
+				break
+			}
+		}
+		if !found {
+			return false
+			break
+		}
+	}
+	return true
 }

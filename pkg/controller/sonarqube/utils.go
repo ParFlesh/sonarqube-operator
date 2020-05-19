@@ -16,8 +16,9 @@ import (
 
 func (r *ReconcileSonarQube) updateStatus(s *sonarsourcev1alpha1.SonarQubeStatus, cr *sonarsourcev1alpha1.SonarQube) {
 	reqLogger := log.WithValues("SonarQube.Namespace", cr.Namespace, "SonarQube.Name", cr.Name)
+	r.client.Get(context.TODO(), types.NamespacedName{Name: cr.Name, Namespace: cr.Namespace}, cr)
 	if !reflect.DeepEqual(s, cr.Status) {
-		cr.Status = *s
+		cr.Status = *s.DeepCopy()
 		err := r.client.Status().Update(context.TODO(), cr)
 		if err != nil {
 			reqLogger.Error(err, "failed to update status")
@@ -32,7 +33,7 @@ func (r *ReconcileSonarQube) updateStatus(s *sonarsourcev1alpha1.SonarQubeStatus
 
 func (r *ReconcileSonarQube) ParseErrorForReconcileResult(cr *sonarsourcev1alpha1.SonarQube, err error) (reconcile.Result, error) {
 	reqLogger := log.WithValues("SonarQube.Namespace", cr.Namespace, "SonarQube.Name", cr.Name)
-	newStatus := cr.Status
+	newStatus := cr.Status.DeepCopy()
 	if err != nil && utils.ReasonForError(err) != utils.ErrorReasonUnknown {
 		sqErr := err.(*utils.Error)
 		switch sqErr.Type() {
@@ -49,13 +50,7 @@ func (r *ReconcileSonarQube) ParseErrorForReconcileResult(cr *sonarsourcev1alpha
 					Status: corev1.ConditionFalse,
 				})
 			}
-			if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionPending) {
-				newStatus.Conditions.SetCondition(status.Condition{
-					Type:   sonarsourcev1alpha1.ConditionPending,
-					Status: corev1.ConditionFalse,
-				})
-			}
-			r.updateStatus(&newStatus, cr)
+			r.updateStatus(newStatus, cr)
 			reqLogger.Info(sqErr.Error())
 			return reconcile.Result{Requeue: true}, nil
 		case utils.ErrorReasonSpecInvalid, utils.ErrorReasonResourceInvalid:
@@ -71,13 +66,7 @@ func (r *ReconcileSonarQube) ParseErrorForReconcileResult(cr *sonarsourcev1alpha
 					Status: corev1.ConditionFalse,
 				})
 			}
-			if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionPending) {
-				newStatus.Conditions.SetCondition(status.Condition{
-					Type:   sonarsourcev1alpha1.ConditionPending,
-					Status: corev1.ConditionFalse,
-				})
-			}
-			r.updateStatus(&newStatus, cr)
+			r.updateStatus(newStatus, cr)
 			reqLogger.Info(sqErr.Error())
 			return reconcile.Result{}, nil
 		default:

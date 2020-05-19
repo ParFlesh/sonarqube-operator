@@ -32,7 +32,7 @@ func (r *ReconcileSonarQubeServer) updateStatus(s *sonarsourcev1alpha1.SonarQube
 
 func (r *ReconcileSonarQubeServer) ParseErrorForReconcileResult(cr *sonarsourcev1alpha1.SonarQubeServer, err error) (reconcile.Result, error) {
 	reqLogger := log.WithValues("SonarQubeServer.Namespace", cr.Namespace, "SonarQubeServer.Name", cr.Name)
-	newStatus := cr.Status
+	newStatus := cr.Status.DeepCopy()
 	if err != nil && utils.ReasonForError(err) != utils.ErrorReasonUnknown {
 		sqErr := err.(*utils.Error)
 		switch sqErr.Type() {
@@ -55,7 +55,7 @@ func (r *ReconcileSonarQubeServer) ParseErrorForReconcileResult(cr *sonarsourcev
 					Status: corev1.ConditionFalse,
 				})
 			}
-			r.updateStatus(&newStatus, cr)
+			r.updateStatus(newStatus, cr)
 			reqLogger.Info(sqErr.Error())
 			return reconcile.Result{Requeue: true}, nil
 		case utils.ErrorReasonSpecInvalid, utils.ErrorReasonResourceInvalid:
@@ -77,7 +77,7 @@ func (r *ReconcileSonarQubeServer) ParseErrorForReconcileResult(cr *sonarsourcev
 					Status: corev1.ConditionFalse,
 				})
 			}
-			r.updateStatus(&newStatus, cr)
+			r.updateStatus(newStatus, cr)
 			reqLogger.Info(sqErr.Error())
 			return reconcile.Result{}, nil
 		default:
@@ -123,7 +123,7 @@ func (r *ReconcileSonarQubeServer) PodLabels(cr *sonarsourcev1alpha1.SonarQubeSe
 	labels := r.Labels(cr)
 	podLabels := make(map[string]string)
 	podLabels[sonarsourcev1alpha1.ServerTypeLabel] = labels[sonarsourcev1alpha1.ServerTypeLabel]
-	podLabels["deployment"] = cr.Name
+	podLabels["Deployment"] = cr.Name
 
 	return labels
 }

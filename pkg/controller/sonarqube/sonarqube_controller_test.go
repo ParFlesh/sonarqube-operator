@@ -321,7 +321,7 @@ func TestSonarQubeController(t *testing.T) {
 	}
 
 	// Start the servers
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 8; i++ {
 		res, err = r.Reconcile(req)
 		if err != nil {
 			t.Fatalf(ReconcileErrorFormat, err)

@@ -150,8 +150,7 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	newStatus := &sonarsourcev1alpha1.SonarQubeStatus{}
-	*newStatus = instance.Status
+	newStatus := instance.Status.DeepCopy()
 	if newStatus.Pods == nil {
 		newStatus.Pods = make(sonarsourcev1alpha1.PodStatuses)
 	}
@@ -180,7 +179,7 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return r.ParseErrorForReconcileResult(instance, err)
 	}
 
-	*newStatus = instance.Status
+	newStatus = instance.Status.DeepCopy()
 
 	if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
 		newStatus.Conditions.SetCondition(status.Condition{

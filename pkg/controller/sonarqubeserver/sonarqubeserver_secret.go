@@ -32,26 +32,14 @@ func (r *ReconcileSonarQubeServer) ReconcileSecret(cr *sonarsourcev1alpha1.Sonar
 		if val, ok := annotations[sonarsourcev1alpha1.SecretAnnotation]; ok && !strings.Contains(val, cr.Name) {
 			annotations[sonarsourcev1alpha1.SecretAnnotation] = fmt.Sprintf("%s,%s", val, cr.Name)
 			foundSecret.SetAnnotations(annotations)
-			if err := r.client.Update(context.TODO(), foundSecret); err != nil {
-				return foundSecret, err
-			}
-			return foundSecret, &utils.Error{
-				Reason:  utils.ErrorReasonResourceUpdate,
-				Message: "secret annotations updated",
-			}
+			return foundSecret, utils.UpdateResource(r.client, foundSecret, utils.ErrorReasonResourceUpdate, "updated secret annotation")
 		} else if !ok {
 			if annotations == nil {
 				annotations = make(map[string]string)
 			}
 			annotations[sonarsourcev1alpha1.SecretAnnotation] = cr.Name
 			foundSecret.SetAnnotations(annotations)
-			if err := r.client.Update(context.TODO(), foundSecret); err != nil {
-				return foundSecret, err
-			}
-			return foundSecret, &utils.Error{
-				Reason:  utils.ErrorReasonResourceUpdate,
-				Message: "secret annotations updated",
-			}
+			return foundSecret, utils.UpdateResource(r.client, foundSecret, utils.ErrorReasonResourceUpdate, "updated secret annotation")
 		}
 	}
 
@@ -104,14 +92,7 @@ func (r *ReconcileSonarQubeServer) newSecret(cr *sonarsourcev1alpha1.SonarQubeSe
 
 	if cr.Spec.Secret == "" {
 		cr.Spec.Secret = fmt.Sprintf("%s-config", cr.Name)
-		err := r.client.Update(context.TODO(), cr)
-		if err != nil {
-			return dep, err
-		}
-		return dep, &utils.Error{
-			Reason:  utils.ErrorReasonSpecUpdate,
-			Message: "updated secret",
-		}
+		return dep, utils.UpdateResource(r.client, cr, utils.ErrorReasonSpecUpdate, "updated secret")
 	}
 
 	dep.Name = cr.Spec.Secret

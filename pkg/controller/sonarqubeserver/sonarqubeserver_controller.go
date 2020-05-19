@@ -158,8 +158,7 @@ func (r *ReconcileSonarQubeServer) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	newStatus := &sonarsourcev1alpha1.SonarQubeServerStatus{}
-	*newStatus = instance.Status
+	newStatus := instance.Status.DeepCopy()
 	if newStatus.Deployment == nil {
 		newStatus.Deployment = make(sonarsourcev1alpha1.DeploymentStatus)
 	}
@@ -185,7 +184,7 @@ func (r *ReconcileSonarQubeServer) Reconcile(request reconcile.Request) (reconci
 		return r.ParseErrorForReconcileResult(instance, err)
 	}
 
-	*newStatus = instance.Status
+	newStatus = instance.Status.DeepCopy()
 
 	if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
 		newStatus.Conditions.SetCondition(status.Condition{

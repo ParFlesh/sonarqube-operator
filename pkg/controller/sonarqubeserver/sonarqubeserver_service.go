@@ -34,8 +34,7 @@ func (r *ReconcileSonarQubeServer) ReconcileService(cr *sonarsourcev1alpha1.Sona
 		return service, err
 	}
 
-	newStatus := &sonarsourcev1alpha1.SonarQubeServerStatus{}
-	*newStatus = cr.Status
+	newStatus := cr.Status.DeepCopy()
 
 	newStatus.Service = service.Name
 
@@ -163,46 +162,22 @@ func (r *ReconcileSonarQubeServer) verifyService(cr *sonarsourcev1alpha1.SonarQu
 
 	if !reflect.DeepEqual(newService.Spec.Selector, s.Spec.Selector) {
 		s.Spec.Selector = newService.Spec.Selector
-		if err := r.client.Update(context.TODO(), s); err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: "updated service selector",
-		}
+		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service selector")
 	}
 
 	if !reflect.DeepEqual(newService.Spec.Ports, s.Spec.Ports) {
 		s.Spec.Ports = newService.Spec.Ports
-		if err := r.client.Update(context.TODO(), s); err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: "updated service ports",
-		}
+		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service ports")
 	}
 
 	if !reflect.DeepEqual(newService.Spec.Type, s.Spec.Type) {
 		s.Spec.Type = newService.Spec.Type
-		if err := r.client.Update(context.TODO(), s); err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: "updated service type",
-		}
+		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service type")
 	}
 
 	if !reflect.DeepEqual(newService.Labels, s.Labels) {
 		s.Labels = newService.Labels
-		if err := r.client.Update(context.TODO(), s); err != nil {
-			return err
-		}
-		return &utils.Error{
-			Reason:  utils.ErrorReasonResourceUpdate,
-			Message: "updated service labels",
-		}
+		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service labels")
 	}
 
 	return nil

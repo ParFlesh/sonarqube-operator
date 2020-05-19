@@ -172,28 +172,14 @@ func (r *ReconcileSonarQube) startupCluster(cr *sonarsourcev1alpha1.SonarQube, s
 	for _, v := range s[sonarsourcev1alpha1.Search] {
 		if v.Spec.Size != 1 {
 			v.Spec.Size = 1
-			err := r.client.Update(context.TODO(), v)
-			if err != nil {
-				return err
-			}
-			return &utils.Error{
-				Reason:  utils.ErrorReasonResourceUpdate,
-				Message: fmt.Sprintf("starting sonarqube server %s", v.Name),
-			}
+			return utils.UpdateResource(r.client, v, utils.ErrorReasonResourceUpdate, fmt.Sprintf("starting sonarqube server %s", v.Name))
 		}
 	}
 
 	for _, v := range s[sonarsourcev1alpha1.Application] {
 		if v.Spec.Size != 1 {
 			v.Spec.Size = 1
-			err := r.client.Update(context.TODO(), v)
-			if err != nil {
-				return err
-			}
-			return &utils.Error{
-				Reason:  utils.ErrorReasonResourceUpdate,
-				Message: fmt.Sprintf("starting sonarqube server %s", v.Name),
-			}
+			return utils.UpdateResource(r.client, v, utils.ErrorReasonResourceUpdate, fmt.Sprintf("starting sonarqube server %s", v.Name))
 		}
 	}
 
@@ -245,19 +231,17 @@ func (r *ReconcileSonarQube) verifySonarQubeServersSearchHosts(cr *sonarsourcev1
 
 	for t, l := range s {
 		for _, v := range l {
+			var update bool
 			if !reflect.DeepEqual(v.Spec.SearchHosts, searchServiceIPS) {
 				v.Spec.SearchHosts = searchServiceIPS
-				err := r.client.Update(context.TODO(), v)
-				if err != nil {
-					return err
-				}
+				update = true
 			}
 			if t == sonarsourcev1alpha1.Application && !reflect.DeepEqual(v.Spec.Hosts, applicationServiceIPS) {
 				v.Spec.Hosts = applicationServiceIPS
-				err := r.client.Update(context.TODO(), v)
-				if err != nil {
-					return err
-				}
+				update = true
+			}
+			if update {
+				return utils.UpdateResource(r.client, v, utils.ErrorReasonResourceUpdate, fmt.Sprintf("updates sonarqube server %s", v.Name))
 			}
 		}
 	}
