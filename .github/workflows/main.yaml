@@ -32,6 +32,11 @@ jobs:
         run: go get -v -t -d ./...
       - name: Build
         run: go build -o build/_output/bin/sonarqube-operator github.com/parflesh/sonarqube-operator/cmd/manager
+      - name: Upload math result for job 1
+        uses: actions/upload-artifact@v1
+        with:
+          name: binary
+          path: build/_output/bin/sonarqube-operator
       - name: Test
         run: go test -v ./pkg/... -json -coverprofile=cov.out > report.json
       - name: SonarCloud Scan
