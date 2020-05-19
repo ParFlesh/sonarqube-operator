@@ -54,7 +54,7 @@ jobs:
           echo '${{ steps.file_changes.outputs.files_added }}'
           echo '${{ steps.file_changes.outputs.files_removed }}'
   build:
-    name: Test/Analyze
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.x
