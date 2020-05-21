@@ -1,14 +1,11 @@
 package sonarqubeserver
 
 import (
-	"context"
 	"fmt"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 )
@@ -58,21 +55,8 @@ func (r *ReconcileSonarQubeServer) findSecret(cr *sonarsourcev1alpha1.SonarQubeS
 	}
 
 	foundSecret := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: newSecret.Name, Namespace: newSecret.Namespace}, foundSecret)
-	if err != nil && errors.IsNotFound(err) {
-		err := r.client.Create(context.TODO(), newSecret)
-		if err != nil {
-			return newSecret, err
-		}
-		return newSecret, &utils.Error{
-			Reason:  utils.ErrorReasonResourceCreate,
-			Message: fmt.Sprintf("created secret %s", newSecret.Name),
-		}
-	} else if err != nil {
-		return newSecret, err
-	}
 
-	return foundSecret, nil
+	return foundSecret, utils.CreateResourceIfNotFound(r.client, newSecret, foundSecret)
 }
 
 func (r *ReconcileSonarQubeServer) newSecret(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Secret, error) {
@@ -104,7 +88,7 @@ func (r *ReconcileSonarQubeServer) newSecret(cr *sonarsourcev1alpha1.SonarQubeSe
 	return dep, nil
 }
 
-func (r *ReconcileSonarQubeServer) verifySecret(cr *sonarsourcev1alpha1.SonarQubeServer, s *corev1.Secret) error {
+func (r *ReconcileSonarQubeServer) verifySecret(cr *sonarsourcev1alpha1.SonarQubeServer, _ *corev1.Secret) error {
 	/*var sonarProperties *properties.Properties
 	var sonarPropertiesExists bool
 	if v, ok := s.Data["sonar.properties"]; ok {

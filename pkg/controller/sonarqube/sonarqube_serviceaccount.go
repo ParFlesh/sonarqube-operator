@@ -1,14 +1,10 @@
 package sonarqube
 
 import (
-	"context"
-	"fmt"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -35,21 +31,8 @@ func (r *ReconcileSonarQube) findServiceAccount(cr *sonarsourcev1alpha1.SonarQub
 	}
 
 	foundServiceAccount := &corev1.ServiceAccount{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: newService.Name, Namespace: newService.Namespace}, foundServiceAccount)
-	if err != nil && errors.IsNotFound(err) {
-		err := r.client.Create(context.TODO(), newService)
-		if err != nil {
-			return newService, err
-		}
-		return newService, &utils.Error{
-			Reason:  utils.ErrorReasonResourceCreate,
-			Message: fmt.Sprintf("created Service %s", newService.Name),
-		}
-	} else if err != nil {
-		return newService, err
-	}
 
-	return foundServiceAccount, nil
+	return foundServiceAccount, utils.CreateResourceIfNotFound(r.client, newService, foundServiceAccount)
 }
 
 func (r *ReconcileSonarQube) newServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {

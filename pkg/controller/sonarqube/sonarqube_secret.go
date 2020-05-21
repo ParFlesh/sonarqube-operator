@@ -1,7 +1,6 @@
 package sonarqube
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,9 +9,7 @@ import (
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	"github.com/thanhpk/randstr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 )
@@ -62,21 +59,8 @@ func (r *ReconcileSonarQube) findSecret(cr *sonarsourcev1alpha1.SonarQube) (*cor
 	}
 
 	foundSecret := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: newSecret.Name, Namespace: newSecret.Namespace}, foundSecret)
-	if err != nil && errors.IsNotFound(err) {
-		err := r.client.Create(context.TODO(), newSecret)
-		if err != nil {
-			return newSecret, err
-		}
-		return newSecret, &utils.Error{
-			Reason:  utils.ErrorReasonResourceCreate,
-			Message: fmt.Sprintf("created secret %s", newSecret.Name),
-		}
-	} else if err != nil {
-		return newSecret, err
-	}
 
-	return foundSecret, nil
+	return foundSecret, utils.CreateResourceIfNotFound(r.client, newSecret, foundSecret)
 }
 
 func (r *ReconcileSonarQube) newSecret(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Secret, error) {

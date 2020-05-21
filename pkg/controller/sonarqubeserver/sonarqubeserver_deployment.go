@@ -1,15 +1,12 @@
 package sonarqubeserver
 
 import (
-	"context"
 	"fmt"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -22,13 +19,6 @@ const (
 	VolumePathLogs       string = "/opt/sonarqube/logs"
 	VolumePathTemp       string = "/opt/sonarqube/temp"
 	VolumePathExtensions string = "/opt/sonarqube/extensions"
-)
-
-type Component string
-
-const (
-	ComponentApplication Component = "application"
-	ComponentSearch      Component = "search"
 )
 
 // Reconciles Deployment for SonarQubeServer
@@ -44,6 +34,29 @@ func (r *ReconcileSonarQubeServer) ReconcileDeployment(cr *sonarsourcev1alpha1.S
 		return deployment, err
 	}
 
+	err = r.verifyDeployment(cr, deployment)
+	if err != nil {
+		return deployment, err
+	}
+
+	newStatus := cr.Status.DeepCopy()
+
+	newStatus.Deployment = r.getDeploymentStatus(deployment)
+	r.updateStatus(newStatus, cr)
+
+	if len(newStatus.Deployment[appsv1.DeploymentReplicaFailure]) > 0 {
+		return deployment, &utils.Error{
+			Reason:  utils.ErrorReasonResourceInvalid,
+			Message: "deployment replica failure",
+		}
+	}
+	if *deployment.Spec.Replicas > 0 && len(newStatus.Deployment[appsv1.DeploymentAvailable]) == 0 {
+		return deployment, &utils.Error{
+			Reason:  utils.ErrorReasonResourceWaiting,
+			Message: "waiting for deployment to be available and not progressing",
+		}
+	}
+
 	return deployment, nil
 }
 
@@ -54,44 +67,8 @@ func (r *ReconcileSonarQubeServer) findDeployment(cr *sonarsourcev1alpha1.SonarQ
 	}
 
 	foundDeployment := &appsv1.Deployment{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: newDeployment.Name, Namespace: newDeployment.Namespace}, foundDeployment)
-	if err != nil && errors.IsNotFound(err) {
-		err := r.client.Create(context.TODO(), newDeployment)
-		if err != nil {
-			return newDeployment, err
-		}
-		return newDeployment, &utils.Error{
-			Reason:  utils.ErrorReasonResourceCreate,
-			Message: fmt.Sprintf("create Deployment %s", newDeployment.Name),
-		}
-	} else if err != nil {
-		return newDeployment, err
-	}
 
-	err = r.verifyDeployment(cr, foundDeployment)
-	if err != nil {
-		return foundDeployment, err
-	}
-
-	newStatus := cr.Status.DeepCopy()
-
-	newStatus.Deployment = r.getDeploymentStatus(foundDeployment)
-	r.updateStatus(newStatus, cr)
-
-	if len(newStatus.Deployment[appsv1.DeploymentReplicaFailure]) > 0 {
-		return foundDeployment, &utils.Error{
-			Reason:  utils.ErrorReasonResourceInvalid,
-			Message: "deployment replica failure",
-		}
-	}
-	if *foundDeployment.Spec.Replicas > 0 && len(newStatus.Deployment[appsv1.DeploymentAvailable]) == 0 {
-		return foundDeployment, &utils.Error{
-			Reason:  utils.ErrorReasonResourceWaiting,
-			Message: "waiting for deployment to be available and not progressing",
-		}
-	}
-
-	return foundDeployment, nil
+	return foundDeployment, utils.CreateResourceIfNotFound(r.client, newDeployment, foundDeployment)
 }
 
 func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQubeServer) (*appsv1.Deployment, error) {

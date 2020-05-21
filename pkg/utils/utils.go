@@ -7,8 +7,10 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -60,6 +62,25 @@ func UpdateResource(client client.Writer, object runtime.Object, reason ErrorTyp
 		Reason:  reason,
 		Message: message,
 	}
+}
+
+func CreateResourceIfNotFound(client client.Client, object, output runtime.Object) error {
+	metaObject := object.(metav1.Object)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: metaObject.GetName(), Namespace: metaObject.GetNamespace()}, output)
+	if err != nil && errors.IsNotFound(err) {
+		err := client.Create(context.TODO(), object)
+		if err != nil {
+			return err
+		}
+		return &Error{
+			Reason:  ErrorReasonResourceCreate,
+			Message: fmt.Sprintf("created %s %s", object.GetObjectKind().GroupVersionKind().Kind, metaObject.GetName()),
+		}
+	} else if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ClearConditions(conditions status.Conditions) status.Conditions {

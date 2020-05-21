@@ -26,6 +26,11 @@ func (r *ReconcileSonarQube) ReconcileSonarQubeServers(cr *sonarsourcev1alpha1.S
 		return sonarQubeServers, err
 	}
 
+	err = r.verifySonarQubeServers(cr, sonarQubeServers)
+	if err != nil {
+		return sonarQubeServers, err
+	}
+
 	return sonarQubeServers, nil
 }
 
@@ -39,27 +44,12 @@ func (r *ReconcileSonarQube) findSonarQubeServers(cr *sonarsourcev1alpha1.SonarQ
 	for t, l := range newSonarQubeServers {
 		for _, s := range l {
 			sonarQubeServer := &sonarsourcev1alpha1.SonarQubeServer{}
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: s.Name, Namespace: cr.Namespace}, sonarQubeServer)
-			if err != nil && errors.IsNotFound(err) {
-				err := r.client.Create(context.TODO(), s)
-				if err != nil {
-					return sonarQubeServers, err
-				}
-				sonarQubeServers[t] = append(sonarQubeServers[t], sonarQubeServer)
-				return sonarQubeServers, &utils.Error{
-					Reason:  utils.ErrorReasonResourceCreate,
-					Message: fmt.Sprintf("created sonarqube server %s", s.Name),
-				}
-			} else if err != nil {
+			err := utils.CreateResourceIfNotFound(r.client, s, sonarQubeServer)
+			if err != nil {
 				return sonarQubeServers, err
 			}
 			sonarQubeServers[t] = append(sonarQubeServers[t], sonarQubeServer)
 		}
-	}
-
-	err = r.verifySonarQubeServers(cr, sonarQubeServers)
-	if err != nil {
-		return sonarQubeServers, err
 	}
 
 	return sonarQubeServers, nil
@@ -164,11 +154,11 @@ func (r *ReconcileSonarQube) verifySonarQubeServers(cr *sonarsourcev1alpha1.Sona
 	return nil
 }
 
-func (r *ReconcileSonarQube) shutdownCluster(cr *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
+func (r *ReconcileSonarQube) shutdownCluster(_ *sonarsourcev1alpha1.SonarQube, _ map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
 	return nil
 }
 
-func (r *ReconcileSonarQube) startupCluster(cr *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
+func (r *ReconcileSonarQube) startupCluster(_ *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
 	for _, v := range s[sonarsourcev1alpha1.Search] {
 		if v.Spec.Size != 1 {
 			v.Spec.Size = 1
@@ -218,7 +208,7 @@ func (r *ReconcileSonarQube) getSonarQubeServersClusterIP(s []*sonarsourcev1alph
 	return ips, nil
 }
 
-func (r *ReconcileSonarQube) verifySonarQubeServersSearchHosts(cr *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
+func (r *ReconcileSonarQube) verifySonarQubeServersSearchHosts(_ *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
 	searchServiceIPS, err := r.getSonarQubeServersClusterIP(s[sonarsourcev1alpha1.Search])
 	if err != nil {
 		return err
