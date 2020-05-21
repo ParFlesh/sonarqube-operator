@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/magiconair/properties"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,4 +60,20 @@ func UpdateResource(client client.Writer, object runtime.Object, reason ErrorTyp
 		Reason:  reason,
 		Message: message,
 	}
+}
+
+func ClearConditions(conditions status.Conditions) status.Conditions {
+	var cList []status.ConditionType
+	for _, c := range conditions {
+		cList = append(cList, c.Type)
+	}
+
+	for _, c := range cList {
+		conditions.SetCondition(status.Condition{
+			Type:   c,
+			Status: corev1.ConditionFalse,
+		})
+	}
+
+	return conditions
 }

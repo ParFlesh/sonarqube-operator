@@ -3,7 +3,7 @@ package sonarqube
 import (
 	"context"
 	"fmt"
-	"github.com/operator-framework/operator-sdk/pkg/status"
+	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	"github.com/parflesh/sonarqube-operator/version"
 	"k8s.io/apimachinery/pkg/types"
 	"strings"
@@ -181,26 +181,7 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 
 	newStatus = instance.Status.DeepCopy()
 
-	if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
-		newStatus.Conditions.SetCondition(status.Condition{
-			Type:   sonarsourcev1alpha1.ConditionInvalid,
-			Status: corev1.ConditionFalse,
-		})
-	}
-
-	if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
-		newStatus.Conditions.SetCondition(status.Condition{
-			Type:   sonarsourcev1alpha1.ConditionProgressing,
-			Status: corev1.ConditionFalse,
-		})
-	}
-
-	if newStatus.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionPending) {
-		newStatus.Conditions.SetCondition(status.Condition{
-			Type:   sonarsourcev1alpha1.ConditionPending,
-			Status: corev1.ConditionFalse,
-		})
-	}
+	newStatus.Conditions = utils.ClearConditions(newStatus.Conditions)
 
 	r.updateStatus(newStatus, instance)
 
