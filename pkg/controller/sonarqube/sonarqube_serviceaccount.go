@@ -37,7 +37,7 @@ func (r *ReconcileSonarQube) findServiceAccount(cr *sonarsourcev1alpha1.SonarQub
 
 func (r *ReconcileSonarQube) newServiceAccount(cr *sonarsourcev1alpha1.SonarQube) (*corev1.ServiceAccount, error) {
 	labels := r.Labels(cr)
-	labels["app.kubernetes.io/component"] = "application"
+	labels[sonarsourcev1alpha1.KubeAppPartof] = cr.Name
 
 	dep := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{

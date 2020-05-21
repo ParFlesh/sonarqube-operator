@@ -5,16 +5,8 @@ import (
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-)
-
-const (
-	ApplicationWebPort int32 = 9000
-	ApplicationPort    int32 = 9003
-	ApplicationCEPort  int32 = 9004
-	//SearchPort         int32 = 9001
 )
 
 // Reconciles Service for SonarQube
@@ -56,6 +48,7 @@ func (r *ReconcileSonarQube) findService(cr *sonarsourcev1alpha1.SonarQube) (*co
 
 func (r *ReconcileSonarQube) newService(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Service, error) {
 	labels := r.Labels(cr)
+	labels[sonarsourcev1alpha1.KubeAppPartof] = cr.Name
 
 	dep := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -66,39 +59,7 @@ func (r *ReconcileSonarQube) newService(cr *sonarsourcev1alpha1.SonarQube) (*cor
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Type:     corev1.ServiceTypeClusterIP,
-		},
-	}
-
-	dep.Spec.Ports = []corev1.ServicePort{
-		{
-			Name:     "web",
-			Protocol: corev1.ProtocolTCP,
-			Port:     ApplicationWebPort,
-			TargetPort: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: ApplicationWebPort,
-				StrVal: "",
-			},
-		},
-		{
-			Name:     "ce",
-			Protocol: corev1.ProtocolTCP,
-			Port:     ApplicationCEPort,
-			TargetPort: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: ApplicationCEPort,
-				StrVal: "",
-			},
-		},
-		{
-			Name:     "node",
-			Protocol: corev1.ProtocolTCP,
-			Port:     ApplicationPort,
-			TargetPort: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: ApplicationPort,
-				StrVal: "",
-			},
+			Ports:    utils.ServicePorts(""),
 		},
 	}
 

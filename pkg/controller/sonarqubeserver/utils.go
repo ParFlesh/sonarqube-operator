@@ -105,16 +105,16 @@ func (r *ReconcileSonarQubeServer) getImage(cr *sonarsourcev1alpha1.SonarQubeSer
 func (r *ReconcileSonarQubeServer) Labels(cr *sonarsourcev1alpha1.SonarQubeServer) map[string]string {
 	labels := make(map[string]string)
 
+	for k, v := range cr.Labels {
+		labels[k] = v
+	}
+
 	labels[sonarsourcev1alpha1.ServerTypeLabel] = cr.Name
 	labels[sonarsourcev1alpha1.KubeAppName] = "SonarQubeServer"
 	labels[sonarsourcev1alpha1.KubeAppInstance] = cr.Name
 	labels[sonarsourcev1alpha1.KubeAppVersion] = cr.Status.RevisionHash
 	labels[sonarsourcev1alpha1.KubeAppManagedby] = fmt.Sprintf("sonarqube-operator.v%s", version.Version)
 	labels[sonarsourcev1alpha1.KubeAppComponent] = string(cr.Spec.Type)
-
-	for k, v := range cr.Labels {
-		labels[k] = v
-	}
 
 	return labels
 }

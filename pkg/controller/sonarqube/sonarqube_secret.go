@@ -65,6 +65,7 @@ func (r *ReconcileSonarQube) findSecret(cr *sonarsourcev1alpha1.SonarQube) (*cor
 
 func (r *ReconcileSonarQube) newSecret(cr *sonarsourcev1alpha1.SonarQube) (*corev1.Secret, error) {
 	labels := r.Labels(cr)
+	labels[sonarsourcev1alpha1.KubeAppPartof] = cr.Name
 
 	dep := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

@@ -1,0 +1,74 @@
+package utils
+
+import (
+	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+func ServicePorts(serverType sonarsourcev1alpha1.ServerType) []corev1.ServicePort {
+	var servicePorts []corev1.ServicePort
+	switch serverType {
+	case sonarsourcev1alpha1.AIO, "":
+		servicePorts = []corev1.ServicePort{
+			{
+				Name:     "web",
+				Protocol: corev1.ProtocolTCP,
+				Port:     sonarsourcev1alpha1.ApplicationWebPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: sonarsourcev1alpha1.ApplicationWebPort,
+					StrVal: "",
+				},
+			},
+		}
+	case sonarsourcev1alpha1.Application:
+		servicePorts = []corev1.ServicePort{
+			{
+				Name:     "web",
+				Protocol: corev1.ProtocolTCP,
+				Port:     sonarsourcev1alpha1.ApplicationWebPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: sonarsourcev1alpha1.ApplicationWebPort,
+					StrVal: "",
+				},
+			},
+			{
+				Name:     "ce",
+				Protocol: corev1.ProtocolTCP,
+				Port:     sonarsourcev1alpha1.ApplicationCEPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: sonarsourcev1alpha1.ApplicationCEPort,
+					StrVal: "",
+				},
+			},
+			{
+				Name:     "node",
+				Protocol: corev1.ProtocolTCP,
+				Port:     sonarsourcev1alpha1.ApplicationPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: sonarsourcev1alpha1.ApplicationPort,
+					StrVal: "",
+				},
+			},
+		}
+	case sonarsourcev1alpha1.Search:
+		servicePorts = []corev1.ServicePort{
+			{
+				Name:     "search",
+				Protocol: corev1.ProtocolTCP,
+				Port:     sonarsourcev1alpha1.SearchPort,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: sonarsourcev1alpha1.SearchPort,
+					StrVal: "",
+				},
+			},
+		}
+	}
+
+	return servicePorts
+}

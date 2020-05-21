@@ -50,3 +50,10 @@ const (
 	Application ServerType = "application"
 	Search      ServerType = "search"
 )
+
+const (
+	ApplicationWebPort int32 = 9000
+	ApplicationPort    int32 = 9003
+	ApplicationCEPort  int32 = 9004
+	SearchPort         int32 = 9001
+)

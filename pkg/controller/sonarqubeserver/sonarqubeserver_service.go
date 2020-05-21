@@ -5,16 +5,8 @@ import (
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-)
-
-const (
-	ApplicationWebPort int32 = 9000
-	ApplicationPort    int32 = 9003
-	ApplicationCEPort  int32 = 9004
-	SearchPort         int32 = 9001
 )
 
 // Reconciles Service for SonarQubeServer
@@ -66,68 +58,8 @@ func (r *ReconcileSonarQubeServer) newService(cr *sonarsourcev1alpha1.SonarQubeS
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Type:     corev1.ServiceTypeClusterIP,
+			Ports:    utils.ServicePorts(cr.Spec.Type),
 		},
-	}
-	switch cr.Spec.Type {
-	case sonarsourcev1alpha1.AIO, "":
-		dep.Spec.Ports = []corev1.ServicePort{
-			{
-				Name:     "web",
-				Protocol: corev1.ProtocolTCP,
-				Port:     ApplicationWebPort,
-				TargetPort: intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: ApplicationWebPort,
-					StrVal: "",
-				},
-			},
-		}
-	case sonarsourcev1alpha1.Application:
-		dep.Spec.Ports = []corev1.ServicePort{
-			{
-				Name:     "web",
-				Protocol: corev1.ProtocolTCP,
-				Port:     ApplicationWebPort,
-				TargetPort: intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: ApplicationWebPort,
-					StrVal: "",
-				},
-			},
-			{
-				Name:     "ce",
-				Protocol: corev1.ProtocolTCP,
-				Port:     ApplicationCEPort,
-				TargetPort: intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: ApplicationCEPort,
-					StrVal: "",
-				},
-			},
-			{
-				Name:     "node",
-				Protocol: corev1.ProtocolTCP,
-				Port:     ApplicationPort,
-				TargetPort: intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: ApplicationPort,
-					StrVal: "",
-				},
-			},
-		}
-	case sonarsourcev1alpha1.Search:
-		dep.Spec.Ports = []corev1.ServicePort{
-			{
-				Name:     "search",
-				Protocol: corev1.ProtocolTCP,
-				Port:     SearchPort,
-				TargetPort: intstr.IntOrString{
-					Type:   intstr.Int,
-					IntVal: SearchPort,
-					StrVal: "",
-				},
-			},
-		}
 	}
 
 	if err := controllerutil.SetControllerReference(cr, dep, r.scheme); err != nil {

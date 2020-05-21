@@ -149,7 +149,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SONARR_WEB_PORT",
-									Value: fmt.Sprintf("%v", ApplicationWebPort),
+									Value: fmt.Sprintf("%v", sonarsourcev1alpha1.ApplicationWebPort),
 								},
 								{
 									Name:  "SONARR_PATH_DATA",
@@ -231,14 +231,14 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
 			{
 				Name:          "web",
-				ContainerPort: ApplicationWebPort,
+				ContainerPort: sonarsourcev1alpha1.ApplicationWebPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 		}
 		dep.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
-				IntVal: ApplicationWebPort,
+				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
 				StrVal: "",
 			},
 		}
@@ -246,7 +246,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 			Path: "/api/system/status",
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
-				IntVal: ApplicationWebPort,
+				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
 				StrVal: "",
 			},
 			Scheme: corev1.URISchemeHTTP,
@@ -255,17 +255,17 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
 			{
 				Name:          "web",
-				ContainerPort: ApplicationWebPort,
+				ContainerPort: sonarsourcev1alpha1.ApplicationWebPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 			{
 				Name:          "node",
-				ContainerPort: ApplicationPort,
+				ContainerPort: sonarsourcev1alpha1.ApplicationPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 			{
 				Name:          "ce",
-				ContainerPort: ApplicationCEPort,
+				ContainerPort: sonarsourcev1alpha1.ApplicationCEPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 		}
@@ -313,7 +313,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 		dep.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
-				IntVal: ApplicationWebPort,
+				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
 				StrVal: "",
 			},
 		}
@@ -321,7 +321,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 			Path: "/api/system/status",
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
-				IntVal: ApplicationWebPort,
+				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
 				StrVal: "",
 			},
 			Scheme: corev1.URISchemeHTTP,
@@ -330,7 +330,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
 			{
 				Name:          "search",
-				ContainerPort: SearchPort,
+				ContainerPort: sonarsourcev1alpha1.SearchPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
 		}
@@ -379,14 +379,14 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 		dep.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
-				IntVal: SearchPort,
+				IntVal: sonarsourcev1alpha1.SearchPort,
 				StrVal: "",
 			},
 		}
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
-				IntVal: SearchPort,
+				IntVal: sonarsourcev1alpha1.SearchPort,
 				StrVal: "",
 			},
 		}

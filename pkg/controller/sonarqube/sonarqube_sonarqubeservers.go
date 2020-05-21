@@ -81,6 +81,7 @@ func (r *ReconcileSonarQube) newSonarQubeServers(cr *sonarsourcev1alpha1.SonarQu
 func (r *ReconcileSonarQube) newSonarQubeServer(cr *sonarsourcev1alpha1.SonarQube, component sonarsourcev1alpha1.ServerType, i int32) (*sonarsourcev1alpha1.SonarQubeServer, error) {
 	labels := r.Labels(cr)
 	labels[sonarsourcev1alpha1.KubeAppComponent] = string(component)
+	labels[sonarsourcev1alpha1.KubeAppPartof] = cr.Name
 
 	serviceAccount, err := r.ReconcileServiceAccount(cr)
 	if err != nil {
