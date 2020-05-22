@@ -26,15 +26,15 @@ func (r *ReconcileSonarQubeServer) ReconcileSecret(cr *sonarsourcev1alpha1.Sonar
 
 	if !utils.IsOwner(cr, foundSecret) {
 		annotations := foundSecret.GetAnnotations()
-		if val, ok := annotations[sonarsourcev1alpha1.SecretAnnotation]; ok && !strings.Contains(val, cr.Name) {
-			annotations[sonarsourcev1alpha1.SecretAnnotation] = fmt.Sprintf("%s,%s", val, cr.Name)
+		if val, ok := annotations[sonarsourcev1alpha1.ServerSecretAnnotation]; ok && !strings.Contains(val, cr.Name) {
+			annotations[sonarsourcev1alpha1.ServerSecretAnnotation] = fmt.Sprintf("%s,%s", val, cr.Name)
 			foundSecret.SetAnnotations(annotations)
 			return foundSecret, utils.UpdateResource(r.client, foundSecret, utils.ErrorReasonResourceUpdate, "updated secret annotation")
 		} else if !ok {
 			if annotations == nil {
 				annotations = make(map[string]string)
 			}
-			annotations[sonarsourcev1alpha1.SecretAnnotation] = cr.Name
+			annotations[sonarsourcev1alpha1.ServerSecretAnnotation] = cr.Name
 			foundSecret.SetAnnotations(annotations)
 			return foundSecret, utils.UpdateResource(r.client, foundSecret, utils.ErrorReasonResourceUpdate, "updated secret annotation")
 		}
