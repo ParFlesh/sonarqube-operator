@@ -14,8 +14,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strings"
 )
 
 var log = logf.Log.WithName("controller_sonarqube")
@@ -173,7 +175,10 @@ func UpdateStatus(client client.Client, newObject interface{}, object interface{
 	objectRuntime := object.(runtime.Object)
 	objectMetav1 := object.(metav1.Object)
 
-	client.Get(context.TODO(), types.NamespacedName{Name: objectMetav1.GetName(), Namespace: objectMetav1.GetNamespace()}, objectRuntime)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: objectMetav1.GetName(), Namespace: objectMetav1.GetNamespace()}, objectRuntime)
+	if err != nil {
+		log.Error(err, "failed to get updated object")
+	}
 
 	var requiresUpdate bool
 	switch t := object.(type) {
@@ -202,4 +207,25 @@ func UpdateStatus(client client.Client, newObject interface{}, object interface{
 			reqLogger.Error(err, "failed to get updated object")
 		}
 	}
+}
+
+type SecretMapper struct {
+	Annotation string
+}
+
+func (r *SecretMapper) Map(o handler.MapObject) []reconcile.Request {
+	var output []reconcile.Request
+	for k, v := range o.Meta.GetAnnotations() {
+		if k == r.Annotation {
+			for _, e := range strings.Split(v, ",") {
+				output = append(output, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: o.Meta.GetNamespace(),
+						Name:      e,
+					},
+				})
+			}
+		}
+	}
+	return output
 }

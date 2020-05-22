@@ -3,12 +3,9 @@ package sonarqube
 import (
 	"context"
 	"fmt"
+	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	"github.com/parflesh/sonarqube-operator/version"
-	"k8s.io/apimachinery/pkg/types"
-	"strings"
-
-	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,8 +19,7 @@ import (
 )
 
 const (
-	DefaultImage      = "sonarqube"
-	DefaultVolumeSize = "1Gi"
+	DefaultImage = "sonarqube"
 )
 
 var log = logf.Log.WithName("controller_sonarqube")
@@ -87,36 +83,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to secondary resource PersistentVolumeClaim and requeue the owner SonarQube
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: secretHandlerFunc,
+		ToRequests: &utils.SecretMapper{Annotation: sonarsourcev1alpha1.SecretAnnotation},
 	})
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-type secretMapper func(handler.MapObject) []reconcile.Request
-
-func (r secretMapper) Map(o handler.MapObject) []reconcile.Request {
-	return r(o)
-}
-
-var secretHandlerFunc secretMapper = func(o handler.MapObject) []reconcile.Request {
-	var output []reconcile.Request
-	for k, v := range o.Meta.GetAnnotations() {
-		if k == sonarsourcev1alpha1.SecretAnnotation {
-			for _, e := range strings.Split(v, ",") {
-				output = append(output, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: o.Meta.GetNamespace(),
-						Name:      e,
-					},
-				})
-			}
-		}
-	}
-	return output
 }
 
 // blank assignment to verify that ReconcileSonarQube implements reconcile.Reconciler
