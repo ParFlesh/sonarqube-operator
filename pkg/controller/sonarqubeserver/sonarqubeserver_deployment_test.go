@@ -17,7 +17,7 @@ import (
 
 // TestSonarQubeServerDeployment runs ReconcileSonarQubeServer.ReconcileDeployment() against a
 // fake client
-func TestSonarQubeServerDeploymentAIO(t *testing.T) {
+func TestSonarQubeServerDeployment(t *testing.T) {
 	// Set the logger to development mode for verbose logs.
 	logf.SetLogger(logf.ZapLogger(true))
 
@@ -27,77 +27,109 @@ func TestSonarQubeServerDeploymentAIO(t *testing.T) {
 	)
 
 	// A SonarQubeServer resource with metadata and spec.
-	sonarqube := &sonarsourcev1alpha1.SonarQubeServer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+	sonarqubeList := []*sonarsourcev1alpha1.SonarQubeServer{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{},
 		},
-		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{},
-	}
-	// Objects to track in the fake client.
-	objs := []runtime.Object{
-		sonarqube,
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
+				Type: sonarsourcev1alpha1.AIO,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
+				Type: sonarsourcev1alpha1.Application,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
+				Type: sonarsourcev1alpha1.Search,
+			},
+		},
 	}
 
-	// Register operator types with the runtime scheme.
-	s := scheme.Scheme
-	s.AddKnownTypes(sonarsourcev1alpha1.SchemeGroupVersion, sonarqube)
-	// Create a fake client to mock API calls.
-	cl := fake.NewFakeClientWithScheme(s, objs...)
-	// Create a ReconcileSonarQubeServer object with the scheme and fake client.
-	r := &ReconcileSonarQubeServer{client: cl, scheme: s}
-
-	// Take care of dependencies, if there is an unkown error here there is not much to do
-	for {
-		_, err := r.ReconcileServiceAccount(sonarqube)
-		if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
-			t.Fatalf("reconcileServiceAccount: (%v)", err)
-		} else if err == nil {
-			break
+	for _, sonarqube := range sonarqubeList {
+		// Objects to track in the fake client.
+		objs := []runtime.Object{
+			sonarqube,
 		}
-	}
 
-	for {
-		_, err := r.ReconcileSecret(sonarqube)
-		if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
-			t.Fatalf("reconcileServiceAccount: (%v)", err)
-		} else if err == nil {
-			break
+		// Register operator types with the runtime scheme.
+		s := scheme.Scheme
+		s.AddKnownTypes(sonarsourcev1alpha1.SchemeGroupVersion, sonarqube)
+		// Create a fake client to mock API calls.
+		cl := fake.NewFakeClientWithScheme(s, objs...)
+		// Create a ReconcileSonarQubeServer object with the scheme and fake client.
+		r := &ReconcileSonarQubeServer{client: cl, scheme: s}
+
+		// Take care of dependencies, if there is an unkown error here there is not much to do
+		for {
+			_, err := r.ReconcileServiceAccount(sonarqube)
+			if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
+				t.Fatalf("reconcileServiceAccount: (%v)", err)
+			} else if err == nil {
+				break
+			}
 		}
-	}
 
-	for {
-		_, err := r.ReconcilePVCs(sonarqube)
-		if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
-			t.Fatalf("reconcileServiceAccount: (%v)", err)
-		} else if err == nil {
-			break
+		for {
+			_, err := r.ReconcileSecret(sonarqube)
+			if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
+				t.Fatalf("reconcileServiceAccount: (%v)", err)
+			} else if err == nil {
+				break
+			}
 		}
-	}
 
-	for {
-		_, err := r.ReconcileService(sonarqube)
-		if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
-			t.Fatalf("reconcileServiceAccount: (%v)", err)
-		} else if err == nil {
-			break
+		for {
+			_, err := r.ReconcilePVCs(sonarqube)
+			if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
+				t.Fatalf("reconcileServiceAccount: (%v)", err)
+			} else if err == nil {
+				break
+			}
 		}
-	}
 
-	_, err := r.ReconcileDeployment(sonarqube)
-	if utils.ReasonForError(err) != utils.ErrorReasonResourceCreate {
-		t.Error("reconcileDeployment: resource created error not thrown when creating Deployment")
-	}
-	deployment := &appsv1.Deployment{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: sonarqube.Namespace}, deployment)
-	if err != nil && errors.IsNotFound(err) {
-		t.Error("reconcileDeployment: Deployment not created")
-	} else if err != nil {
-		t.Fatalf("reconcileDeployment: (%v)", err)
-	}
+		for {
+			_, err := r.ReconcileService(sonarqube)
+			if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
+				t.Fatalf("reconcileServiceAccount: (%v)", err)
+			} else if err == nil {
+				break
+			}
+		}
 
-	deployment, err = r.ReconcileDeployment(sonarqube)
-	if err != nil {
-		t.Error("reconcileDeployment: returned error even though Deployment is in expected state")
+		_, err := r.ReconcileDeployment(sonarqube)
+		if utils.ReasonForError(err) != utils.ErrorReasonResourceCreate {
+			t.Error("reconcileDeployment: resource created error not thrown when creating Deployment")
+		}
+		deployment := &appsv1.Deployment{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: sonarqube.Namespace}, deployment)
+		if err != nil && errors.IsNotFound(err) {
+			t.Error("reconcileDeployment: Deployment not created")
+		} else if err != nil {
+			t.Fatalf("reconcileDeployment: (%v)", err)
+		}
+
+		deployment, err = r.ReconcileDeployment(sonarqube)
+		if err != nil {
+			t.Error("reconcileDeployment: returned error even though Deployment is in expected state")
+		}
 	}
 }
