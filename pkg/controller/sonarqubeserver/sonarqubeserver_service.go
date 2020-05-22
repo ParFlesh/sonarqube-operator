@@ -5,7 +5,6 @@ import (
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -28,7 +27,11 @@ func (r *ReconcileSonarQubeServer) ReconcileService(cr *sonarsourcev1alpha1.Sona
 
 	utils.UpdateStatus(r.client, newStatus, cr)
 
-	if err := r.verifyService(cr, service); err != nil {
+	newService, err := r.newService(cr)
+	if err != nil {
+		return service, err
+	}
+	if err := utils.VerifyService(r.client, service, newService); err != nil {
 		return service, err
 	}
 
@@ -67,34 +70,4 @@ func (r *ReconcileSonarQubeServer) newService(cr *sonarsourcev1alpha1.SonarQubeS
 	}
 
 	return dep, nil
-}
-
-func (r *ReconcileSonarQubeServer) verifyService(cr *sonarsourcev1alpha1.SonarQubeServer, s *corev1.Service) error {
-	newService, err := r.newService(cr)
-	if err != nil {
-		return err
-	}
-
-	if !reflect.DeepEqual(newService.Spec.Selector, s.Spec.Selector) {
-		s.Spec.Selector = newService.Spec.Selector
-		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service selector")
-	}
-
-	if !reflect.DeepEqual(newService.Spec.Ports, s.Spec.Ports) {
-		s.Spec.Ports = newService.Spec.Ports
-		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service ports")
-	}
-
-	if !reflect.DeepEqual(newService.Spec.Type, s.Spec.Type) {
-		s.Spec.Type = newService.Spec.Type
-		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service type")
-	}
-
-	if !reflect.DeepEqual(newService.Labels, s.Labels) {
-		s.Labels = newService.Labels
-		return utils.UpdateResource(r.client, s, utils.ErrorReasonResourceUpdate, "updated service labels")
-	}
-
-	return nil
-
 }
