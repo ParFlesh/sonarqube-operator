@@ -192,7 +192,15 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 								},
 							},
 							LivenessProbe: &corev1.Probe{
-								Handler:             corev1.Handler{},
+								Handler: corev1.Handler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.IntOrString{
+											Type:   intstr.Int,
+											IntVal: sonarsourcev1alpha1.ApplicationWebPort,
+											StrVal: "",
+										},
+									},
+								},
 								InitialDelaySeconds: 60,
 								TimeoutSeconds:      1,
 								PeriodSeconds:       10,
@@ -200,7 +208,17 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 								FailureThreshold:    3,
 							},
 							ReadinessProbe: &corev1.Probe{
-								Handler:             corev1.Handler{},
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/api/system/status",
+										Port: intstr.IntOrString{
+											Type:   intstr.Int,
+											IntVal: sonarsourcev1alpha1.ApplicationWebPort,
+											StrVal: "",
+										},
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
 								InitialDelaySeconds: 0,
 								TimeoutSeconds:      1,
 								PeriodSeconds:       10,
@@ -234,22 +252,6 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				ContainerPort: sonarsourcev1alpha1.ApplicationWebPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
-		}
-		dep.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
-			Port: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
-				StrVal: "",
-			},
-		}
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet = &corev1.HTTPGetAction{
-			Path: "/api/system/status",
-			Port: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
-				StrVal: "",
-			},
-			Scheme: corev1.URISchemeHTTP,
 		}
 	case sonarsourcev1alpha1.Application:
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
@@ -310,22 +312,6 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 			},
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, clusteredEnv...)
-		dep.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
-			Port: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
-				StrVal: "",
-			},
-		}
-		dep.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet = &corev1.HTTPGetAction{
-			Path: "/api/system/status",
-			Port: intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: sonarsourcev1alpha1.ApplicationWebPort,
-				StrVal: "",
-			},
-			Scheme: corev1.URISchemeHTTP,
-		}
 	case sonarsourcev1alpha1.Search:
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
 			{
@@ -383,6 +369,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				StrVal: "",
 			},
 		}
+		dep.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet = nil
 		dep.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.TCPSocket = &corev1.TCPSocketAction{
 			Port: intstr.IntOrString{
 				Type:   intstr.Int,
