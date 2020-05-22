@@ -55,7 +55,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Deployment and requeue the owner SonarQube
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
+		OwnerType:    &sonarsourcev1alpha1.SonarQubeServer{},
 	})
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Service and requeue the owner SonarQube
 	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
+		OwnerType:    &sonarsourcev1alpha1.SonarQubeServer{},
 	})
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Secret and requeue the owner SonarQube
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
+		OwnerType:    &sonarsourcev1alpha1.SonarQubeServer{},
 	})
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource PersistentVolumeClaim and requeue the owner SonarQube
 	err = c.Watch(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &sonarsourcev1alpha1.SonarQube{},
+		OwnerType:    &sonarsourcev1alpha1.SonarQubeServer{},
 	})
 	if err != nil {
 		return err
