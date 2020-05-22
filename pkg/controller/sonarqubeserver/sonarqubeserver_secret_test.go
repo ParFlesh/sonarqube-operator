@@ -146,7 +146,7 @@ func TestSonarQubeServerSecretUnowned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reconcileSecret: (%v)", err)
 	}
-	if v, ok := secret.GetAnnotations()[sonarsourcev1alpha1.SecretAnnotation]; !ok || v != sonarqube.Name {
+	if v, ok := secret.GetAnnotations()[sonarsourcev1alpha1.ServerSecretAnnotation]; !ok || v != sonarqube.Name {
 		t.Error("reconcileSecret: secret annotation isn't sonarqube name")
 	}
 
@@ -158,7 +158,7 @@ func TestSonarQubeServerSecretUnowned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reconcileSecret: (%v)", err)
 	}
-	if v, ok := secret.GetAnnotations()[sonarsourcev1alpha1.SecretAnnotation]; !ok || !strings.Contains(v, sonarqube.Name) {
+	if v, ok := secret.GetAnnotations()[sonarsourcev1alpha1.ServerSecretAnnotation]; !ok || !strings.Contains(v, sonarqube.Name) {
 		t.Error("reconcileSecret: sonarqube2 name not appended to secret annotation")
 	}
 }
