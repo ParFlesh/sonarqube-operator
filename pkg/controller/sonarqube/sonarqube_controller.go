@@ -150,40 +150,40 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	newStatus := instance.Status.DeepCopy()
-	if newStatus.Pods == nil {
-		newStatus.Pods = make(sonarsourcev1alpha1.PodStatuses)
+	newStatus := instance.DeepCopy()
+	if newStatus.Status.Pods == nil {
+		newStatus.Status.Pods = make(sonarsourcev1alpha1.PodStatuses)
 	}
-	if newStatus.SearchPods == nil {
-		newStatus.SearchPods = make(sonarsourcev1alpha1.PodStatuses)
+	if newStatus.Status.SearchPods == nil {
+		newStatus.Status.SearchPods = make(sonarsourcev1alpha1.PodStatuses)
 	}
-	r.updateStatus(newStatus, instance)
+	utils.UpdateStatus(r.client, newStatus, instance)
 
 	_, err = r.ReconcileSecret(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
 	_, err = r.ReconcileServiceAccount(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
 	_, err = r.ReconcileService(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
 	_, err = r.ReconcileSonarQubeServers(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
-	newStatus = instance.Status.DeepCopy()
+	newStatus = instance.DeepCopy()
 
-	newStatus.Conditions = utils.ClearConditions(newStatus.Conditions)
+	newStatus.Status.Conditions = utils.ClearConditions(newStatus.Status.Conditions)
 
-	r.updateStatus(newStatus, instance)
+	utils.UpdateStatus(r.client, newStatus, instance)
 
 	return reconcile.Result{}, nil
 }

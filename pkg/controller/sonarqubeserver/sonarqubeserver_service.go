@@ -22,11 +22,11 @@ func (r *ReconcileSonarQubeServer) ReconcileService(cr *sonarsourcev1alpha1.Sona
 		return service, err
 	}
 
-	newStatus := cr.Status.DeepCopy()
+	newStatus := cr.DeepCopy()
 
-	newStatus.Service = service.Name
+	newStatus.Status.Service = service.Name
 
-	r.updateStatus(newStatus, cr)
+	utils.UpdateStatus(r.client, newStatus, cr)
 
 	if err := r.verifyService(cr, service); err != nil {
 		return service, err

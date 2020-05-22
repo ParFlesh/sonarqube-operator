@@ -153,37 +153,37 @@ func (r *ReconcileSonarQubeServer) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	newStatus := instance.Status.DeepCopy()
-	if newStatus.Deployment == nil {
-		newStatus.Deployment = make(sonarsourcev1alpha1.DeploymentStatus)
+	newStatus := instance.DeepCopy()
+	if newStatus.Status.Deployment == nil {
+		newStatus.Status.Deployment = make(sonarsourcev1alpha1.DeploymentStatus)
 	}
-	r.updateStatus(newStatus, instance)
+	utils.UpdateStatus(r.client, newStatus, instance)
 
 	_, err = r.ReconcileSecret(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
 	_, err = r.ReconcileServiceAccount(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
 	_, err = r.ReconcileService(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
 	_, err = r.ReconcileDeployment(instance)
 	if err != nil {
-		return r.ParseErrorForReconcileResult(instance, err)
+		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
-	newStatus = instance.Status.DeepCopy()
+	newStatus = instance.DeepCopy()
 
-	newStatus.Conditions = utils.ClearConditions(newStatus.Conditions)
+	newStatus.Status.Conditions = utils.ClearConditions(newStatus.Status.Conditions)
 
-	r.updateStatus(newStatus, instance)
+	utils.UpdateStatus(r.client, newStatus, instance)
 
 	return reconcile.Result{}, nil
 }

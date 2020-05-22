@@ -39,18 +39,18 @@ func (r *ReconcileSonarQubeServer) ReconcileDeployment(cr *sonarsourcev1alpha1.S
 		return deployment, err
 	}
 
-	newStatus := cr.Status.DeepCopy()
+	newStatus := cr.DeepCopy()
 
-	newStatus.Deployment = r.getDeploymentStatus(deployment)
-	r.updateStatus(newStatus, cr)
+	newStatus.Status.Deployment = r.getDeploymentStatus(deployment)
+	utils.UpdateStatus(r.client, newStatus, cr)
 
-	if len(newStatus.Deployment[appsv1.DeploymentReplicaFailure]) > 0 {
+	if len(newStatus.Status.Deployment[appsv1.DeploymentReplicaFailure]) > 0 {
 		return deployment, &utils.Error{
 			Reason:  utils.ErrorReasonResourceInvalid,
 			Message: "deployment replica failure",
 		}
 	}
-	if *deployment.Spec.Replicas > 0 && len(newStatus.Deployment[appsv1.DeploymentAvailable]) == 0 {
+	if *deployment.Spec.Replicas > 0 && len(newStatus.Status.Deployment[appsv1.DeploymentAvailable]) == 0 {
 		return deployment, &utils.Error{
 			Reason:  utils.ErrorReasonResourceWaiting,
 			Message: "waiting for deployment to be available and not progressing",

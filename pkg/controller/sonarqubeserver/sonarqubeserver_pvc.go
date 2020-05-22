@@ -23,9 +23,9 @@ func (r *ReconcileSonarQubeServer) ReconcilePVCs(cr *sonarsourcev1alpha1.SonarQu
 		return pvcs, err
 	}
 
-	newStatus := cr.Status.DeepCopy()
+	newStatus := cr.DeepCopy()
 
-	r.updateStatus(newStatus, cr)
+	utils.UpdateStatus(r.client, newStatus, cr)
 	return pvcs, nil
 }
 

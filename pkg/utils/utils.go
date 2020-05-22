@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"github.com/magiconair/properties"
 	"github.com/operator-framework/operator-sdk/pkg/status"
+	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+var log = logf.Log.WithName("controller_sonarqube")
 
 func IsOwner(owner, child metav1.Object) bool {
 	ownerUID := owner.GetUID()
@@ -97,4 +103,103 @@ func ClearConditions(conditions status.Conditions) status.Conditions {
 	}
 
 	return conditions
+}
+
+func ParseErrorForReconcileResult(client client.Client, object interface{}, err error) (reconcile.Result, error) {
+	objectRuntime := object.(runtime.Object)
+	objectMeta := object.(metav1.Object)
+	reqLogger := log.WithValues("SonarQube.Namespace", objectMeta.GetNamespace(), "SonarQube.Name", objectMeta.GetName())
+	newStatus := objectRuntime.DeepCopyObject()
+	var statusConditions *status.Conditions
+	switch t := newStatus.(type) {
+	case *sonarsourcev1alpha1.SonarQubeServer:
+		statusConditions = &t.Status.Conditions
+	case *sonarsourcev1alpha1.SonarQube:
+		statusConditions = &t.Status.Conditions
+	}
+
+	if statusConditions == nil {
+		statusConditions = &status.Conditions{}
+	}
+
+	if err != nil && ReasonForError(err) != ErrorReasonUnknown {
+		sqErr := err.(*Error)
+		switch sqErr.Type() {
+		case ErrorReasonSpecUpdate, ErrorReasonResourceCreate, ErrorReasonResourceUpdate, ErrorReasonResourceWaiting:
+			statusConditions.SetCondition(status.Condition{
+				Type:    sonarsourcev1alpha1.ConditionProgressing,
+				Status:  corev1.ConditionTrue,
+				Reason:  sonarsourcev1alpha1.ConditionResourcesCreating,
+				Message: sqErr.Error(),
+			})
+			if statusConditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
+				statusConditions.SetCondition(status.Condition{
+					Type:   sonarsourcev1alpha1.ConditionInvalid,
+					Status: corev1.ConditionFalse,
+				})
+			}
+			UpdateStatus(client, newStatus, object)
+			reqLogger.Info(sqErr.Error())
+			return reconcile.Result{Requeue: true}, nil
+		case ErrorReasonSpecInvalid, ErrorReasonResourceInvalid:
+			statusConditions.SetCondition(status.Condition{
+				Type:    sonarsourcev1alpha1.ConditionInvalid,
+				Status:  corev1.ConditionTrue,
+				Reason:  sonarsourcev1alpha1.ConditionSpecInvalid,
+				Message: sqErr.Error(),
+			})
+			if statusConditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
+				statusConditions.SetCondition(status.Condition{
+					Type:   sonarsourcev1alpha1.ConditionProgressing,
+					Status: corev1.ConditionFalse,
+				})
+			}
+			UpdateStatus(client, newStatus, object)
+			reqLogger.Info(sqErr.Error())
+			return reconcile.Result{}, nil
+		default:
+			reqLogger.Error(sqErr, "unhandled sonarqube error")
+			return reconcile.Result{}, nil
+		}
+	}
+	return reconcile.Result{}, err
+}
+
+type Status interface {
+	DeepCopy()
+}
+
+func UpdateStatus(client client.Client, newObject interface{}, object interface{}) {
+	objectRuntime := object.(runtime.Object)
+	objectMetav1 := object.(metav1.Object)
+
+	client.Get(context.TODO(), types.NamespacedName{Name: objectMetav1.GetName(), Namespace: objectMetav1.GetNamespace()}, objectRuntime)
+
+	var requiresUpdate bool
+	switch t := object.(type) {
+	case *sonarsourcev1alpha1.SonarQubeServer:
+		newSonarQubeServer := newObject.(*sonarsourcev1alpha1.SonarQubeServer)
+		if !reflect.DeepEqual(newSonarQubeServer.Status, t.Status) {
+			t.Status = *newSonarQubeServer.Status.DeepCopy()
+			requiresUpdate = true
+		}
+	case *sonarsourcev1alpha1.SonarQube:
+		newSonarQube := newObject.(*sonarsourcev1alpha1.SonarQube)
+		if !reflect.DeepEqual(newSonarQube.Status, t.Status) {
+			t.Status = *newSonarQube.Status.DeepCopy()
+			requiresUpdate = true
+		}
+	}
+	reqLogger := log.WithValues("SonarQube.Namespace", objectMetav1.GetNamespace(), "SonarQube.Name", objectMetav1.GetName())
+
+	if requiresUpdate {
+		err := client.Status().Update(context.TODO(), objectRuntime)
+		if err != nil {
+			reqLogger.Error(err, "failed to update status")
+		}
+		err = client.Get(context.TODO(), types.NamespacedName{Name: objectMetav1.GetName(), Namespace: objectMetav1.GetNamespace()}, objectRuntime)
+		if err != nil {
+			reqLogger.Error(err, "failed to get updated object")
+		}
+	}
 }
