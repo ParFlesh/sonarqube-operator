@@ -91,7 +91,7 @@ func TestSonarQubeController(t *testing.T) {
 		t.Errorf("condition progressing not set")
 	}
 	secret := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Spec.Secret, Namespace: sonarqube.Namespace}, secret)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: *sonarqube.Spec.Secret, Namespace: sonarqube.Namespace}, secret)
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcile: secret not created")
 	} else if err != nil {
@@ -150,6 +150,24 @@ func TestSonarQubeController(t *testing.T) {
 	if !res.Requeue {
 		t.Error("reconcile did not requeue")
 	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue")
+	}
 	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
 	if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
@@ -189,7 +207,7 @@ func TestSonarQubeController(t *testing.T) {
 	}
 
 	// Check for search sonarqube servers
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		res, err = r.Reconcile(req)
 		if err != nil {
 			t.Fatalf(ReconcileErrorFormat, err)
@@ -223,7 +241,16 @@ func TestSonarQubeController(t *testing.T) {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
-	if !res.Requeue {
+	if res.Requeue {
+		t.Error("reconcile requeued even though it should be watching for resource updates")
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if res.Requeue {
 		t.Error("reconcile requeued even though resources are starting")
 	}
 
@@ -262,7 +289,7 @@ func TestSonarQubeController(t *testing.T) {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}
 	// Check the result of reconciliation to make sure it has the desired state.
-	if !res.Requeue {
+	if res.Requeue {
 		t.Error("reconcile requeued even though the services aren't ready")
 	}
 
@@ -321,14 +348,21 @@ func TestSonarQubeController(t *testing.T) {
 	}
 
 	// Start the servers
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 11; i++ {
 		res, err = r.Reconcile(req)
 		if err != nil {
 			t.Fatalf(ReconcileErrorFormat, err)
 		}
 		// Check the result of reconciliation to make sure it has the desired state.
 		if !res.Requeue {
-			t.Error("reconcile requeued even though the services aren't ready")
+			t.Error("reconcile did not requeue even though the servers are not started")
+		}
+		if i >= 3 && (sonarqube.Spec.Shutdown == nil || *sonarqube.Spec.Shutdown != false) {
+			sonarqube.Spec.Shutdown = &[]bool{false}[0]
+			err := r.client.Update(context.TODO(), sonarqube)
+			if err != nil {
+				t.Fatalf(ReconcileErrorFormat, err)
+			}
 		}
 	}
 

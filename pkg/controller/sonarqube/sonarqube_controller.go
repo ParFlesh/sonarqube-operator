@@ -18,10 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	DefaultImage = "sonarqube"
-)
-
 var log = logf.Log.WithName("controller_sonarqube")
 
 /**
@@ -124,17 +120,26 @@ func (r *ReconcileSonarQube) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	newStatus := instance.DeepCopy()
-	if newStatus.Status.Pods == nil {
-		newStatus.Status.Pods = make(sonarsourcev1alpha1.PodStatuses)
+	if newStatus.Status.Deployments == nil {
+		newStatus.Status.Deployments = make(sonarsourcev1alpha1.DeploymentStatuses)
 	}
-	if newStatus.Status.SearchPods == nil {
-		newStatus.Status.SearchPods = make(sonarsourcev1alpha1.PodStatuses)
+	if newStatus.Status.SearchDeployments == nil {
+		newStatus.Status.SearchDeployments = make(sonarsourcev1alpha1.DeploymentStatuses)
 	}
 	utils.UpdateStatus(r.client, newStatus, instance)
 
-	_, err = r.ReconcileSecret(instance)
+	secret, err := r.ReconcileSecret(instance)
 	if err != nil {
 		return utils.ParseErrorForReconcileResult(r.client, instance, err)
+	}
+
+	revisionHash, err := utils.GenVersion(instance.Spec, secret.Data["sonar.properties"])
+
+	newStatus = instance.DeepCopy()
+	if revisionHash != newStatus.Status.Revision {
+		newStatus.Status.Revision = revisionHash
+		utils.UpdateStatus(r.client, newStatus, instance)
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	_, err = r.ReconcileServiceAccount(instance)
@@ -167,7 +172,7 @@ func (r *ReconcileSonarQube) Labels(cr *sonarsourcev1alpha1.SonarQube) map[strin
 	labels[sonarsourcev1alpha1.TypeLabel] = cr.Name
 	labels[sonarsourcev1alpha1.KubeAppName] = "SonarQube"
 	labels[sonarsourcev1alpha1.KubeAppInstance] = cr.Name
-	labels[sonarsourcev1alpha1.KubeAppVersion] = cr.Status.RevisionHash
+	labels[sonarsourcev1alpha1.KubeAppVersion] = cr.Status.Revision
 	labels[sonarsourcev1alpha1.KubeAppManagedby] = fmt.Sprintf("sonarqube-operator.v%s", version.Version)
 
 	for k, v := range cr.Labels {

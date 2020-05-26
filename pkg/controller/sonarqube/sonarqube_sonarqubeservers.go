@@ -83,11 +83,6 @@ func (r *ReconcileSonarQube) newSonarQubeServer(cr *sonarsourcev1alpha1.SonarQub
 	labels[sonarsourcev1alpha1.KubeAppComponent] = string(component)
 	labels[sonarsourcev1alpha1.KubeAppPartof] = cr.Name
 
-	serviceAccount, err := r.ReconcileServiceAccount(cr)
-	if err != nil {
-		return nil, err
-	}
-
 	dep := &sonarsourcev1alpha1.SonarQubeServer{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s-%v", cr.Name, component, i),
@@ -95,17 +90,13 @@ func (r *ReconcileSonarQube) newSonarQubeServer(cr *sonarsourcev1alpha1.SonarQub
 			Labels:    labels,
 		},
 		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-			Size:        0,
-			Version:     cr.Spec.Version,
-			Image:       cr.Spec.Image,
-			Secret:      cr.Spec.Secret,
-			Type:        component,
-			Hosts:       nil,
-			SearchHosts: nil,
-			Deployment: sonarsourcev1alpha1.Deployment{
-				ServiceAccount: serviceAccount.Name,
-			},
-			Storage: sonarsourcev1alpha1.Storage{},
+			Shutdown:       &[]bool{true}[0],
+			Version:        cr.Spec.Version,
+			Secret:         cr.Spec.Secret,
+			Type:           &component,
+			Hosts:          nil,
+			SearchHosts:    nil,
+			ServiceAccount: cr.Spec.ServiceAccount,
 		},
 	}
 
@@ -140,7 +131,7 @@ func (r *ReconcileSonarQube) verifySonarQubeServers(cr *sonarsourcev1alpha1.Sona
 		return err
 	}
 
-	if cr.Spec.Shutdown {
+	if cr.Spec.Shutdown != nil && *cr.Spec.Shutdown == true {
 		err := r.shutdownCluster(cr, s)
 		if err != nil {
 			return err
@@ -161,15 +152,15 @@ func (r *ReconcileSonarQube) shutdownCluster(_ *sonarsourcev1alpha1.SonarQube, _
 
 func (r *ReconcileSonarQube) startupCluster(_ *sonarsourcev1alpha1.SonarQube, s map[sonarsourcev1alpha1.ServerType][]*sonarsourcev1alpha1.SonarQubeServer) error {
 	for _, v := range s[sonarsourcev1alpha1.Search] {
-		if v.Spec.Size != 1 {
-			v.Spec.Size = 1
+		if v.Spec.Shutdown == nil || *v.Spec.Shutdown != false {
+			v.Spec.Shutdown = &[]bool{false}[0]
 			return utils.UpdateResource(r.client, v, utils.ErrorReasonResourceUpdate, fmt.Sprintf("starting sonarqube server %s", v.Name))
 		}
 	}
 
 	for _, v := range s[sonarsourcev1alpha1.Application] {
-		if v.Spec.Size != 1 {
-			v.Spec.Size = 1
+		if v.Spec.Shutdown == nil || *v.Spec.Shutdown != false {
+			v.Spec.Shutdown = &[]bool{false}[0]
 			return utils.UpdateResource(r.client, v, utils.ErrorReasonResourceUpdate, fmt.Sprintf("starting sonarqube server %s", v.Name))
 		}
 	}

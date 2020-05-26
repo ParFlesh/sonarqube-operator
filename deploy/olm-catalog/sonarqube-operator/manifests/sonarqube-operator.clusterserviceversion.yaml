@@ -29,6 +29,7 @@ spec:
   customresourcedefinitions:
     owned:
     - description: SonarQube is the Schema for the sonarqubes API
+      displayName: SonarQube Cluster
       kind: SonarQube
       name: sonarqubes.sonarsource.parflesh.github.io
       resources:
@@ -38,163 +39,143 @@ spec:
       - kind: Service
         name: ""
         version: v1
-      - kind: StatefulSet
+      - kind: SonarQube
         name: ""
-        version: v1
+        version: v1alpha1
       specDescriptors:
-      - description: Run SonarQube as a cluster
-        displayName: Clustered
-        path: clustered
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
-      - description: Image of SonarQube to deploy
-        displayName: Image
-        path: image
+      - description: community, developer, or enterprise (default is community)
+        displayName: Edition
+        path: edition
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: Node Affinity
         displayName: Node Affinity
-        path: node.nodeAffinity
+        path: nodeConfigAdvanced[0].nodeAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfigAdvanced
         - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
       - description: Node selector
         displayName: Node Selector
-        path: node.nodeSelector
+        path: nodeConfigAdvanced[0].nodeSelector
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfigAdvanced
         - urn:alm:descriptor:com.tectonic.ui:selector:Node
       - description: Pod Affinity
         displayName: Pod Affinity
-        path: node.podAffinity
+        path: nodeConfigAdvanced[0].podAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfigAdvanced
         - urn:alm:descriptor:com.tectonic.ui:podAffinity
       - description: Pod AntiAffinity
         displayName: Pod AntiAffinity
-        path: node.podAntiAffinity
+        path: nodeConfigAdvanced[0].podAntiAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfigAdvanced
         - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
       - description: Priority Class Name
         displayName: Priority Class
-        path: node.priorityClass
+        path: nodeConfigAdvanced[0].priorityClass
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfigAdvanced
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Storage Class Name
-        displayName: Storage Class Name
-        path: node.storage.class
+      - description: Resource requirements
+        displayName: Resources
+        path: nodeConfigAdvanced[0].resources
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.storage
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfigAdvanced
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: Node type (all, application, or search)
+        displayName: Type
+        path: nodeConfigAdvanced[0].type
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfigAdvanced
+        - urn:alm:descriptor:com.tectonic.ui:select:all
+        - urn:alm:descriptor:com.tectonic.ui:select:application
+        - urn:alm:descriptor:com.tectonic.ui:select:search
+      - description: Storage class
+        displayName: Storage Class
+        path: nodeConfig[0].storageClass
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfig
         - urn:alm:descriptor:io.kubernetes:StorageClass
-      - description: Data Volume Size
-        displayName: Data Volume Size
-        path: node.storage.data
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.storage
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Extensions Volume Size
-        displayName: Extensions Volume Size
-        path: node.storage.extensions
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.application.storage
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Node Affinity
-        displayName: Node Affinity
-        path: nodeSearch.nodeAffinity
+      - description: Size of Storage (ex 1Gi)
+        displayName: Storage Size
+        path: nodeConfig[0].storageSize
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
-        - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
-      - description: Node selector
-        displayName: Node Selector
-        path: nodeSearch.nodeSelector
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
-        - urn:alm:descriptor:com.tectonic.ui:selector:Node
-      - description: Pod Affinity
-        displayName: Pod Affinity
-        path: nodeSearch.podAffinity
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
-        - urn:alm:descriptor:com.tectonic.ui:podAffinity
-      - description: Pod AntiAffinity
-        displayName: Pod AntiAffinity
-        path: nodeSearch.podAntiAffinity
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
-        - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
-      - description: Priority Class Name
-        displayName: Priority Class
-        path: nodeSearch.priorityClass
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfig
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Storage Class Name
-        displayName: Storage Class Name
-        path: nodeSearch.storage.class
+      - description: Node type (all, application, or search)
+        displayName: Type
+        path: nodeConfig[0].type
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.storage
-        - urn:alm:descriptor:io.kubernetes:StorageClass
-      - description: Data Volume Size
-        displayName: Data Volume Size
-        path: nodeSearch.storage.data
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.storage
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Extensions Volume Size
-        displayName: Extensions Volume Size
-        path: nodeSearch.storage.extensions
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:node.search.storage
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Secret with sonar configuration files (sonar.properties). Don't
-          add cluster properties to configuration files as this could cause unexpected
-          results
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:NodeConfig
+        - urn:alm:descriptor:com.tectonic.ui:select:all
+        - urn:alm:descriptor:com.tectonic.ui:select:application
+        - urn:alm:descriptor:com.tectonic.ui:select:search
+      - description: Secret with sonar configuration files (sonar.properties, wrapper.properties).
+          Don't add cluster properties to configuration files as this could cause
+          unexpected results
         displayName: Secret
         path: secret
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
         - urn:alm:descriptor:io.kubernetes:Secret
+      - description: Service Account
+        displayName: Service Account
+        path: serviceAccount
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Shutdown SonarQube cluster
         displayName: Shutdown
         path: shutdown
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
-      - description: Number of SonarQube Compute Engines
+      - description: Number of SonarQube application nodes
         displayName: Size
         path: size
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
         - urn:alm:descriptor:com.tectonic.ui:podCount
-      - description: Version of SonarQube image to deploy
+      - description: Automatically apply major version updates
+        displayName: Major
+        path: updatesMajor
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:checkbox
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:updates
+      - description: Automatically apply minor version updates
+        displayName: Minor
+        path: updatesMinor
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:checkbox
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:updates
+      - description: if empty operator will start latest version of selected edition
         displayName: Version
         path: version
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:instance
+        - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
       statusDescriptors:
       - description: Status of pods
         displayName: Pod Statuses
-        path: pods
+        path: deployments
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podStatuses
       - description: Status of search pods
         displayName: Search Pod Statuses
-        path: searchPods
+        path: searchDeployments
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podStatuses
       - description: Kubernetes service that can be used to expose SonarQube
@@ -204,36 +185,23 @@ spec:
         - urn:alm:descriptor:io.kubernetes:Service
       version: v1alpha1
     - description: SonarQubeServer is the Schema for the sonarqubeservers API
+      displayName: SonarQube Server
       kind: SonarQubeServer
       name: sonarqubeservers.sonarsource.parflesh.github.io
+      resources:
+      - kind: Deployment
+        name: ""
+        version: v1
+      - kind: Secret
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
       specDescriptors:
-      - description: Node Affinity
-        displayName: Node Affinity
-        path: deployment.nodeAffinity
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
-      - description: Node selector
-        displayName: Node Selector
-        path: deployment.nodeSelector
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:selector:Node
-      - description: Pod Affinity
-        displayName: Pod Affinity
-        path: deployment.podAffinity
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:podAffinity
-      - description: Pod AntiAffinity
-        displayName: Pod AntiAffinity
-        path: deployment.podAntiAffinity
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:advanced
-        - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
-      - description: Priority Class Name
-        displayName: Priority Class
-        path: deployment.priorityClass
+      - description: community, developer, or enterprise (default is community)
+        displayName: Edition
+        path: edition
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
@@ -243,12 +211,52 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:hosts
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Image of SonarQube to deploy
-        displayName: Image
-        path: image
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Node Affinity
+        displayName: Node Affinity
+        path: nodeConfig.nodeAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:nodeAffinity
+      - description: Node selector
+        displayName: Node Selector
+        path: nodeConfig.nodeSelector
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:selector:Node
+      - description: Pod Affinity
+        displayName: Pod Affinity
+        path: nodeConfig.podAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAffinity
+      - description: Pod AntiAffinity
+        displayName: Pod AntiAffinity
+        path: nodeConfig.podAntiAffinity
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
+      - description: Priority Class Name
+        displayName: Priority Class
+        path: nodeConfig.priorityClass
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Resource requirements
+        displayName: Resources
+        path: nodeConfig.resources
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: Storage class
+        displayName: Storage Class
+        path: nodeConfig.storageClass
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:StorageClass
+      - description: Size of Storage (ex 1Gi)
+        displayName: Storage Size
+        path: nodeConfig.storageSize
+        x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: SonarQube search hosts list
         displayName: Search Hosts
@@ -256,55 +264,52 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:searchHosts
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Secret with sonar configuration files (sonar.properties). Don't
-          add cluster properties to configuration files as this could cause unexpected
-          results
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Secret with sonar configuration files (sonar.properties, wrapper.properties).
+          Don't add cluster properties to configuration files as this could cause
+          unexpected results
         displayName: Secret
         path: secret
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes:Secret
-      - description: 0 and 1 are the only valid options.  Used to start and stop server.
-        displayName: Size
-        path: size
+      - description: Service Account
+        displayName: Service Account
+        path: serviceAccount
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:podCount
-      - description: Storage Class Name
-        displayName: Data Storage Class Name
-        path: storage.dataClass
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
-        - urn:alm:descriptor:io.kubernetes:StorageClass
-      - description: Data Volume Size
-        displayName: Data Volume Size
-        path: storage.dataSize
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Storage Class Name
-        displayName: Extensions Storage Class Name
-        path: storage.extensionsClass
+      - description: Shutdown SonarQube server
+        displayName: Shutdown
+        path: shutdown
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
-        - urn:alm:descriptor:io.kubernetes:StorageClass
-      - description: Extensions Volume Size
-        displayName: Extensions Volume Size
-        path: storage.extensionsSize
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage
-        - urn:alm:descriptor:com.tectonic.ui:text
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Sonar Node Type application or search when clustering is enabled
           otherwise aio (all-in-one)
-        displayName: Secret
+        displayName: Server Type
         path: type
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:select:aio
         - urn:alm:descriptor:com.tectonic.ui:select:application
         - urn:alm:descriptor:com.tectonic.ui:select:search
-      - description: Version of SonarQube image to deploy
+      - description: Automatically apply major version updates
+        displayName: Major
+        path: updatesMajor
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:checkbox
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:updates
+      - description: Automatically apply minor version updates
+        displayName: Minor
+        path: updatesMinor
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+        - urn:alm:descriptor:com.tectonic.ui:checkbox
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:updates
+      - description: if empty operator will start latest version of selected edition
+          then lock the version
         displayName: Version
         path: version
         x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
       statusDescriptors:
       - description: Status of pods

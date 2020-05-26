@@ -6,15 +6,13 @@ import (
 
 // Condition Types
 const (
-	// ConditionPending means resources have been created, but one or more resources are not running/ready.
-	ConditionPending status.ConditionType = "Pending"
-	// ConditionRunning means the instance has been created and all of the resources are running/ready.
-	ConditionRunning status.ConditionType = "Running"
 	// ConditionInvalid means that there is a misconfiguration that can not be corrected by the operator.
 	ConditionInvalid status.ConditionType = "Invalid"
 	// ConditionProgressing means that for some reason the state of the resources did not match the expected state.
 	// Resources are being updated to meet expected state.
 	ConditionProgressing status.ConditionType = "Progressing"
+	// ConditionShutdown means that the resources have been shutdown.
+	ConditionShutdown status.ConditionType = "Shutdown"
 )
 
 // Condition Reasons
@@ -23,8 +21,12 @@ const (
 	ConditionResourcesCreating status.ConditionReason = "CreatingResources"
 	// ConditionReasourceUpdating means that resources are updating
 	ConditionReasourcesUpdating status.ConditionReason = "ResourcesUpdating"
+	// ConditionReasourceInvalid means that one or more resources are invalid
+	ConditionReasourcesInvalid status.ConditionReason = "ResourcesInvalid"
 	// ConditionSpecInvalid means that the current spec would result in an invalid running configuration
 	ConditionSpecInvalid status.ConditionReason = "SpecInvalid"
+	// ConditionConfigured means that the current spec specified meeting this condition
+	ConditionConfigured status.ConditionReason = "Configured"
 )
 
 const (
@@ -56,4 +58,15 @@ const (
 	ApplicationPort    int32 = 9003
 	ApplicationCEPort  int32 = 9004
 	SearchPort         int32 = 9001
+)
+
+type DeploymentStatuses map[DeploymentStatus][]string
+
+type DeploymentStatus string
+
+const (
+	DeploymentReady       DeploymentStatus = "Ready"
+	DeploymentAvailable   DeploymentStatus = "Available"
+	DeploymentUpdating    DeploymentStatus = "Updating"
+	DeploymentUnavailable DeploymentStatus = "Unavailable"
 )

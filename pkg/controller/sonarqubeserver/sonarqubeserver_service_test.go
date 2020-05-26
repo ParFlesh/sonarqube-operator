@@ -40,7 +40,7 @@ func TestSonarQubeServerService(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-				Type: sonarsourcev1alpha1.Application,
+				Type: &[]sonarsourcev1alpha1.ServerType{sonarsourcev1alpha1.Application}[0],
 			},
 		},
 		{
@@ -49,7 +49,7 @@ func TestSonarQubeServerService(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-				Type: sonarsourcev1alpha1.Search,
+				Type: &[]sonarsourcev1alpha1.ServerType{sonarsourcev1alpha1.Search}[0],
 			},
 		},
 	}

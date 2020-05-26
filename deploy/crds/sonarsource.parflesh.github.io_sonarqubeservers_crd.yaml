@@ -31,8 +31,20 @@ spec:
         spec:
           description: SonarQubeServerSpec defines the desired state of SonarQubeServer
           properties:
-            deployment:
-              description: Deployment
+            edition:
+              description: community, developer, or enterprise (default is community)
+              enum:
+              - community
+              - developer
+              - enterprise
+              type: string
+            hosts:
+              description: SonarQube application hosts list
+              items:
+                type: string
+              type: array
+            nodeConfig:
+              description: Node Configuration
               properties:
                 nodeAffinity:
                   description: Node Affinity
@@ -633,49 +645,29 @@ spec:
                         to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
                   type: object
-                serviceAccount:
-                  description: Service Account for running pods
+                storageClass:
+                  description: Storage class
+                  type: string
+                storageSize:
+                  description: Size of Storage (ex 1Gi)
                   type: string
               type: object
-            hosts:
-              description: SonarQube application hosts list
-              items:
-                type: string
-              type: array
-            image:
-              description: Image of SonarQube to deploy
-              type: string
             searchHosts:
               description: SonarQube search hosts list
               items:
                 type: string
               type: array
             secret:
-              description: Secret with sonar configuration files (sonar.properties).
-                Don't add cluster properties to configuration files as this could
-                cause unexpected results
+              description: Secret with sonar configuration files (sonar.properties,
+                wrapper.properties). Don't add cluster properties to configuration
+                files as this could cause unexpected results
               type: string
-            size:
-              description: 0 and 1 are the only valid options.  Used to start and
-                stop server.
-              format: int32
-              type: integer
-            storage:
-              description: Storage
-              properties:
-                dataClass:
-                  description: Storage Class Name
-                  type: string
-                dataSize:
-                  description: Data Volume Size
-                  type: string
-                extensionsClass:
-                  description: Storage Class Name
-                  type: string
-                extensionsSize:
-                  description: Extensions Volume Size
-                  type: string
-              type: object
+            serviceAccount:
+              description: Service Account
+              type: string
+            shutdown:
+              description: Shutdown SonarQube server
+              type: boolean
             type:
               description: Sonar Node Type application or search when clustering is
                 enabled otherwise aio (all-in-one)
@@ -684,8 +676,15 @@ spec:
               - application
               - search
               type: string
+            updatesMajor:
+              description: Automatically apply major version updates
+              type: boolean
+            updatesMinor:
+              description: Automatically apply minor version updates
+              type: boolean
             version:
-              description: Version of SonarQube image to deploy
+              description: if empty operator will start latest version of selected
+                edition then lock the version
               type: string
           type: object
         status:
@@ -740,11 +739,6 @@ spec:
               description: Status of pods
               type: object
             revision:
-              description: Expected revision for resources Incremented when there
-                is a change to spec or controller version
-              format: int32
-              type: integer
-            revisionHash:
               description: Hash of latest spec & controller version for revision tracking
               type: string
             service:

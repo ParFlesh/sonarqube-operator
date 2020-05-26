@@ -72,9 +72,9 @@ func sonarqubeDeployTest(t *testing.T, f *framework.Framework, ctx *framework.Co
 		if err != nil {
 			return err
 		}
-		if sonarQube.Spec.Secret != "" {
+		if sonarQube.Spec.Secret != nil {
 			secret := &corev1.Secret{}
-			err := f.Client.Get(context.TODO(), types.NamespacedName{Name: sonarQube.Spec.Secret, Namespace: sonarQube.Namespace}, secret)
+			err := f.Client.Get(context.TODO(), types.NamespacedName{Name: *sonarQube.Spec.Secret, Namespace: sonarQube.Namespace}, secret)
 			if err != nil && !errors.IsNotFound(err) {
 				return err
 			} else if err == nil {
@@ -86,19 +86,6 @@ func sonarqubeDeployTest(t *testing.T, f *framework.Framework, ctx *framework.Co
 				break
 			}
 		}
-	}
-
-	// Wait for search servers
-	for i := 0; i < 3; i++ {
-		err := e2eutil.WaitForDeployment(t, f.KubeClient, namespace, fmt.Sprintf("%s-%s-%v", exampleSonarQube.Name, operator.Search, i), 0, retryInterval, timeout)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, fmt.Sprintf("%s-%s-%v", exampleSonarQube.Name, operator.Application, 0), 0, retryInterval, timeout)
-	if err != nil {
-		return err
 	}
 
 	// Wait for search servers to startup

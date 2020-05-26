@@ -2,7 +2,6 @@ package sonarqubeserver
 
 import (
 	"context"
-	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -89,7 +88,7 @@ func TestSonarQubeServerController(t *testing.T) {
 		t.Errorf("condition progressing not set")
 	}
 	secret := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Spec.Secret, Namespace: sonarqube.Namespace}, secret)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: *sonarqube.Spec.Secret, Namespace: sonarqube.Namespace}, secret)
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcile: secret not created")
 	} else if err != nil {
@@ -154,68 +153,13 @@ func TestSonarQubeServerController(t *testing.T) {
 	if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}
-	if sonarqube.Spec.Storage.DataSize == "" {
-		t.Error("node data size not set to default")
-	}
-
-	res, err = r.Reconcile(req)
-	if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-	// Check the result of reconciliation to make sure it has the desired state.
-	if !res.Requeue {
-		t.Error("reconcile did not requeue")
-	}
-	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
-	if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
 	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
 		t.Errorf("condition progressing not set")
 	}
 	dataPVC := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", sonarqube.Name, "data"), Namespace: namespace}, dataPVC)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: namespace}, dataPVC)
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcile: data pvc not created")
-	} else if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-
-	res, err = r.Reconcile(req)
-	if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-	// Check the result of reconciliation to make sure it has the desired state.
-	if !res.Requeue {
-		t.Error("reconcile did not requeue")
-	}
-	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
-	if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-	if sonarqube.Spec.Storage.DataSize == "" {
-		t.Error("node data size not set to default")
-	}
-
-	res, err = r.Reconcile(req)
-	if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-	// Check the result of reconciliation to make sure it has the desired state.
-	if !res.Requeue {
-		t.Error("reconcile did not requeue")
-	}
-	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
-	if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-	if !sonarqube.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
-		t.Errorf("condition progressing not set")
-	}
-	extensionsPVC := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", sonarqube.Name, "extensions"), Namespace: namespace}, extensionsPVC)
-	if err != nil && errors.IsNotFound(err) {
-		t.Error("reconcile: extensions pvc not created")
 	} else if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}
@@ -241,6 +185,15 @@ func TestSonarQubeServerController(t *testing.T) {
 		t.Error("reconcile: stateful set not created")
 	} else if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
+	}
+
+	deployment.Status.Conditions = append(deployment.Status.Conditions, appsv1.DeploymentCondition{
+		Type:   appsv1.DeploymentAvailable,
+		Status: corev1.ConditionTrue,
+	})
+	err = r.client.Status().Update(context.TODO(), deployment)
+	if err != nil {
+		t.Fatalf("reconcileDeployment: (%v)", err)
 	}
 
 	res, err = r.Reconcile(req)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/parflesh/sonarqube-operator/pkg/apis"
 	operator "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
+	"strings"
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
@@ -20,33 +22,51 @@ func TestSonarQubeServer(t *testing.T) {
 	}
 	// run subtests
 	t.Run("sonarqubeserver-group", func(t *testing.T) {
-		t.Run("Server", SonarQubeServer)
+		t.Run("server1", SonarQubeServer)
 	})
 }
 
 func sonarqubeserverDeployTest(t *testing.T, f *framework.Framework, ctx *framework.Context) error {
 	namespace, err := ctx.GetWatchNamespace()
+	name := strings.Split(t.Name(), "/")[2]
 	if err != nil {
 		return fmt.Errorf("could not get namespace: %v", err)
 	}
 	// create sonarqubeserver custom resource
-	exampleSonarQubeServer := &operator.SonarQubeServer{
+	sonarQubeServer := &operator.SonarQubeServer{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "example-sonarqubeserver",
+			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: operator.SonarQubeServerSpec{
-			Size: 1,
+			Shutdown: &[]bool{true}[0],
 		},
 	}
 	// use TestCtx's create helper to create the object and add a cleanup function for the new object
-	err = f.Client.Create(goctx.TODO(), exampleSonarQubeServer, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	err = f.Client.Create(goctx.TODO(), sonarQubeServer, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	if err != nil {
 		return err
 	}
 
-	// wait for example-sonarqubeserver to reach 1 replica
-	return e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "example-sonarqubeserver", 1, retryInterval, timeout)
+	// wait for sonarqubeserver to reach 0 replica
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, name, 0, retryInterval, timeout)
+	if err != nil {
+		return err
+	}
+
+	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, sonarQubeServer)
+	if err != nil {
+		return err
+	}
+
+	sonarQubeServer.Spec.Shutdown = &[]bool{false}[0]
+	err = f.Client.Update(goctx.TODO(), sonarQubeServer)
+	if err != nil {
+		return err
+	}
+
+	// wait for sonarqubeserver to reach 1 replica
+	return e2eutil.WaitForDeployment(t, f.KubeClient, namespace, name, 1, retryInterval, timeout)
 }
 
 func SonarQubeServer(t *testing.T) {

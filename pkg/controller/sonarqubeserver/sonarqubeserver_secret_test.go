@@ -61,7 +61,7 @@ func TestSonarQubeServerSecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reconcileSecret: (%v)", err)
 	}
-	if sonarqube.Spec.Secret == "" {
+	if sonarqube.Spec.Secret == nil {
 		t.Error("reconcileSecret: spec not updated with secret name")
 	}
 
@@ -70,7 +70,7 @@ func TestSonarQubeServerSecret(t *testing.T) {
 		t.Error("reconcileSecret: resource created error not thrown when creating secret")
 	}
 	secret := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Spec.Secret, Namespace: sonarqube.Namespace}, secret)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: *sonarqube.Spec.Secret, Namespace: sonarqube.Namespace}, secret)
 	if err != nil && errors.IsNotFound(err) {
 		t.Error("reconcileSecret: secret not created")
 	} else if err != nil {
@@ -102,7 +102,7 @@ func TestSonarQubeServerSecretUnowned(t *testing.T) {
 			Namespace: namespace,
 		},
 		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-			Secret: "test",
+			Secret: &[]string{"test"}[0],
 		},
 	}
 	sonarqube2 := &sonarsourcev1alpha1.SonarQubeServer{
@@ -111,7 +111,7 @@ func TestSonarQubeServerSecretUnowned(t *testing.T) {
 			Namespace: namespace,
 		},
 		Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-			Secret: "test",
+			Secret: &[]string{"test"}[0],
 		},
 	}
 	// Objects to track in the fake client.
@@ -130,7 +130,7 @@ func TestSonarQubeServerSecretUnowned(t *testing.T) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: sonarqube.Namespace,
-			Name:      sonarqube.Spec.Secret,
+			Name:      *sonarqube.Spec.Secret,
 		},
 	}
 	err := r.client.Create(context.TODO(), secret)

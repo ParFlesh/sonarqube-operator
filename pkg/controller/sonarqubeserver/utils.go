@@ -4,22 +4,7 @@ import (
 	"fmt"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/version"
-	"strings"
 )
-
-func (r *ReconcileSonarQubeServer) getImage(cr *sonarsourcev1alpha1.SonarQubeServer) string {
-	var sqImage string
-	if cr.Spec.Image != "" {
-		sqImage = cr.Spec.Image
-	} else {
-		sqImage = DefaultImage
-	}
-
-	if !strings.Contains(sqImage, ":") && cr.Spec.Version != "" {
-		sqImage = fmt.Sprintf("%s:%s", sqImage, cr.Spec.Version)
-	}
-	return sqImage
-}
 
 func (r *ReconcileSonarQubeServer) Labels(cr *sonarsourcev1alpha1.SonarQubeServer) map[string]string {
 	labels := make(map[string]string)
@@ -31,9 +16,14 @@ func (r *ReconcileSonarQubeServer) Labels(cr *sonarsourcev1alpha1.SonarQubeServe
 	labels[sonarsourcev1alpha1.ServerTypeLabel] = cr.Name
 	labels[sonarsourcev1alpha1.KubeAppName] = "SonarQubeServer"
 	labels[sonarsourcev1alpha1.KubeAppInstance] = cr.Name
-	labels[sonarsourcev1alpha1.KubeAppVersion] = cr.Status.RevisionHash
+	labels[sonarsourcev1alpha1.KubeAppVersion] = cr.Status.Revision
 	labels[sonarsourcev1alpha1.KubeAppManagedby] = fmt.Sprintf("sonarqube-operator.v%s", version.Version)
-	labels[sonarsourcev1alpha1.KubeAppComponent] = string(cr.Spec.Type)
+
+	if cr.Spec.Type != nil {
+		labels[sonarsourcev1alpha1.KubeAppComponent] = string(*cr.Spec.Type)
+	} else {
+		labels[sonarsourcev1alpha1.KubeAppComponent] = string(sonarsourcev1alpha1.AIO)
+	}
 
 	return labels
 }
@@ -46,7 +36,3 @@ func (r *ReconcileSonarQubeServer) PodLabels(cr *sonarsourcev1alpha1.SonarQubeSe
 
 	return labels
 }
-
-const (
-	DefaultImage = "sonarqube"
-)

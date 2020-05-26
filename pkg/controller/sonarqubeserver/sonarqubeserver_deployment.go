@@ -41,19 +41,27 @@ func (r *ReconcileSonarQubeServer) ReconcileDeployment(cr *sonarsourcev1alpha1.S
 
 	newStatus := cr.DeepCopy()
 
-	newStatus.Status.Deployment = r.getDeploymentStatus(deployment)
+	newStatus.Status.Deployment = r.getDeploymentStatus([]*appsv1.Deployment{deployment})
 	utils.UpdateStatus(r.client, newStatus, cr)
 
-	if len(newStatus.Status.Deployment[appsv1.DeploymentReplicaFailure]) > 0 {
+	if utils.GetDeploymentCondition(deployment, appsv1.DeploymentReplicaFailure) == corev1.ConditionTrue {
 		return deployment, &utils.Error{
 			Reason:  utils.ErrorReasonResourceInvalid,
 			Message: "deployment replica failure",
 		}
 	}
-	if *deployment.Spec.Replicas > 0 && len(newStatus.Status.Deployment[appsv1.DeploymentAvailable]) == 0 {
+
+	if deployment.Status.Replicas > 0 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentAvailable]) < 1 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentReady]) < 1 {
 		return deployment, &utils.Error{
 			Reason:  utils.ErrorReasonResourceWaiting,
 			Message: "waiting for deployment to be available and not progressing",
+		}
+	}
+
+	if deployment.Status.Replicas > 0 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentReady]) < 1 {
+		return deployment, &utils.Error{
+			Reason:  utils.ErrorReasonResourceWaiting,
+			Message: "waiting for deployment to be ready",
 		}
 	}
 
@@ -75,12 +83,19 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 	labels := r.Labels(cr)
 	podLabels := r.PodLabels(cr)
 
-	serviceAccount, secret, pvcs, service, err := r.getDeploymentDeps(cr)
+	serviceAccount, secret, pvc, service, err := r.getDeploymentDeps(cr)
 	if err != nil {
 		return nil, err
 	}
 
-	sqImage := r.getImage(cr)
+	sqImage := utils.GetImage(cr.Spec.Edition, cr.Spec.Version)
+
+	var replicas *int32
+	if cr.Spec.Shutdown == nil || *cr.Spec.Shutdown == false {
+		replicas = &[]int32{1}[0]
+	} else {
+		replicas = &[]int32{0}[0]
+	}
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -92,7 +107,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RecreateDeploymentStrategyType,
 			},
-			Replicas: &cr.Spec.Size,
+			Replicas: replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podLabels,
 			},
@@ -104,12 +119,6 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 				},
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{
-						{
-							Name: "logs",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
 						{
 							Name: "temp",
 							VolumeSource: corev1.VolumeSource{
@@ -126,18 +135,10 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 							},
 						},
 						{
-							Name: "data",
+							Name: "storage",
 							VolumeSource: corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: pvcs[VolumeData].Name,
-								},
-							},
-						},
-						{
-							Name: "extensions",
-							VolumeSource: corev1.VolumeSource{
-								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: pvcs[VolumeExtensions].Name,
+									ClaimName: pvc.Name,
 								},
 							},
 						},
@@ -168,23 +169,25 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 									Value: VolumePathExtensions,
 								},
 							},
-							Resources: cr.Spec.Deployment.Resources,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "data",
+									Name:      "storage",
 									MountPath: VolumePathData,
+									SubPath:   "data",
 								},
 								{
-									Name:      "logs",
+									Name:      "storage",
 									MountPath: VolumePathLogs,
+									SubPath:   "logs",
 								},
 								{
 									Name:      "temp",
 									MountPath: VolumePathTemp,
 								},
 								{
-									Name:      "extensions",
+									Name:      "storage",
 									MountPath: VolumePathExtensions,
+									SubPath:   "extensions",
 								},
 								{
 									Name:      "conf",
@@ -233,19 +236,36 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 					DNSPolicy:                     corev1.DNSDefault,
 					ServiceAccountName:            serviceAccount.Name,
 					Affinity: &corev1.Affinity{
-						NodeAffinity:    cr.Spec.Deployment.NodeAffinity,
-						PodAffinity:     cr.Spec.Deployment.PodAffinity,
-						PodAntiAffinity: cr.Spec.Deployment.PodAntiAffinity,
+						NodeAffinity:    cr.Spec.NodeConfig.NodeAffinity,
+						PodAffinity:     cr.Spec.NodeConfig.PodAffinity,
+						PodAntiAffinity: cr.Spec.NodeConfig.PodAntiAffinity,
 					},
-					NodeSelector:      cr.Spec.Deployment.NodeSelector,
-					PriorityClassName: cr.Spec.Deployment.PriorityClass,
 				},
 			},
 		},
 	}
 
-	switch cr.Spec.Type {
-	case sonarsourcev1alpha1.AIO, "":
+	if cr.Spec.NodeConfig.Resources != nil {
+		dep.Spec.Template.Spec.Containers[0].Resources = *cr.Spec.NodeConfig.Resources
+	}
+
+	if cr.Spec.NodeConfig.NodeSelector != nil {
+		dep.Spec.Template.Spec.NodeSelector = *cr.Spec.NodeConfig.NodeSelector
+	}
+
+	if cr.Spec.NodeConfig.PriorityClass != nil {
+		dep.Spec.Template.Spec.PriorityClassName = *cr.Spec.NodeConfig.PriorityClass
+	}
+
+	var nodeType sonarsourcev1alpha1.ServerType
+	if cr.Spec.Type == nil {
+		nodeType = sonarsourcev1alpha1.AIO
+	} else {
+		nodeType = *cr.Spec.Type
+	}
+
+	switch nodeType {
+	case sonarsourcev1alpha1.AIO:
 		dep.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
 			{
 				Name:          "web",
@@ -287,7 +307,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 			},
 			{
 				Name:  "SONAR_CLUSTER_NODE_TYPE",
-				Value: string(cr.Spec.Type),
+				Value: string(nodeType),
 			},
 			{
 				Name:  "SONAR_CLUSTER_SEARCH_HOSTS",
@@ -332,7 +352,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 			},
 			{
 				Name:  "SONAR_CLUSTER_NODE_TYPE",
-				Value: string(cr.Spec.Type),
+				Value: string(nodeType),
 			},
 			{
 				Name: "SONAR_CLUSTER_NODE_HOST",
@@ -386,7 +406,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 	return dep, nil
 }
 
-func (r *ReconcileSonarQubeServer) getDeploymentDeps(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.ServiceAccount, *corev1.Secret, map[Volume]*corev1.PersistentVolumeClaim, *corev1.Service, error) {
+func (r *ReconcileSonarQubeServer) getDeploymentDeps(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.ServiceAccount, *corev1.Secret, *corev1.PersistentVolumeClaim, *corev1.Service, error) {
 
 	serviceAccount, err := r.ReconcileServiceAccount(cr)
 	if err != nil {
@@ -398,17 +418,17 @@ func (r *ReconcileSonarQubeServer) getDeploymentDeps(cr *sonarsourcev1alpha1.Son
 		return serviceAccount, secret, nil, nil, err
 	}
 
-	pvcs, err := r.ReconcilePVCs(cr)
+	pvc, err := r.ReconcilePVC(cr)
 	if err != nil {
-		return serviceAccount, secret, pvcs, nil, err
+		return serviceAccount, secret, pvc, nil, err
 	}
 
 	service, err := r.ReconcileService(cr)
 	if err != nil {
-		return serviceAccount, secret, pvcs, service, err
+		return serviceAccount, secret, pvc, service, err
 	}
 
-	return serviceAccount, secret, pvcs, service, nil
+	return serviceAccount, secret, pvc, service, nil
 }
 
 func (r *ReconcileSonarQubeServer) verifyDeployment(cr *sonarsourcev1alpha1.SonarQubeServer, deployment *appsv1.Deployment) error {
@@ -417,8 +437,8 @@ func (r *ReconcileSonarQubeServer) verifyDeployment(cr *sonarsourcev1alpha1.Sona
 		return err
 	}
 
-	if !reflect.DeepEqual(*deployment.Spec.Replicas, cr.Spec.Size) {
-		deployment.Spec.Replicas = &cr.Spec.Size
+	if !reflect.DeepEqual(*deployment.Spec.Replicas, *newDeployment.Spec.Replicas) {
+		deployment.Spec.Replicas = newDeployment.Spec.Replicas
 		return utils.UpdateResource(r.client, deployment, utils.ErrorReasonResourceUpdate, "updated deployment replicas")
 	}
 
@@ -443,31 +463,6 @@ func (r *ReconcileSonarQubeServer) verifyDeployment(cr *sonarsourcev1alpha1.Sona
 	}
 
 	return nil
-}
-
-func (r *ReconcileSonarQubeServer) getDeploymentStatus(deployment *appsv1.Deployment) sonarsourcev1alpha1.DeploymentStatus {
-	status := sonarsourcev1alpha1.DeploymentStatus{
-		appsv1.DeploymentAvailable:      []string{},
-		appsv1.DeploymentProgressing:    []string{},
-		appsv1.DeploymentReplicaFailure: []string{},
-	}
-
-	if utils.GetDeploymentCondition(deployment, appsv1.DeploymentAvailable) == corev1.ConditionTrue {
-		status[appsv1.DeploymentAvailable] = []string{deployment.Name}
-		return status
-	}
-
-	if utils.GetDeploymentCondition(deployment, appsv1.DeploymentReplicaFailure) == corev1.ConditionTrue {
-		status[appsv1.DeploymentReplicaFailure] = []string{deployment.Name}
-		return status
-	}
-
-	if utils.GetDeploymentCondition(deployment, appsv1.DeploymentProgressing) == corev1.ConditionTrue {
-		status[appsv1.DeploymentProgressing] = []string{deployment.Name}
-		return status
-	}
-
-	return status
 }
 
 func (r *ReconcileSonarQubeServer) envEqual(c, p []corev1.EnvVar) bool {
@@ -513,4 +508,37 @@ func (r *ReconcileSonarQubeServer) envEqual(c, p []corev1.EnvVar) bool {
 		}
 	}
 	return equal
+}
+
+func (r *ReconcileSonarQubeServer) getDeploymentStatus(deployments []*appsv1.Deployment) sonarsourcev1alpha1.DeploymentStatuses {
+	status := sonarsourcev1alpha1.DeploymentStatuses{
+		sonarsourcev1alpha1.DeploymentAvailable:   []string{},
+		sonarsourcev1alpha1.DeploymentUpdating:    []string{},
+		sonarsourcev1alpha1.DeploymentUnavailable: []string{},
+		sonarsourcev1alpha1.DeploymentReady:       []string{},
+	}
+
+	for _, dep := range deployments {
+		if *dep.Spec.Replicas == 0 {
+			break
+		}
+		if dep.Status.Replicas > dep.Status.UpdatedReplicas {
+			status[sonarsourcev1alpha1.DeploymentUpdating] = append(status[sonarsourcev1alpha1.DeploymentUpdating], dep.Name)
+			break
+		}
+		if dep.Status.Replicas == dep.Status.ReadyReplicas {
+			status[sonarsourcev1alpha1.DeploymentReady] = append(status[sonarsourcev1alpha1.DeploymentReady], dep.Name)
+			break
+		}
+		if dep.Status.Replicas == dep.Status.AvailableReplicas {
+			status[sonarsourcev1alpha1.DeploymentAvailable] = append(status[sonarsourcev1alpha1.DeploymentAvailable], dep.Name)
+			break
+		}
+		if dep.Status.Replicas == dep.Status.UnavailableReplicas {
+			status[sonarsourcev1alpha1.DeploymentUnavailable] = append(status[sonarsourcev1alpha1.DeploymentUnavailable], dep.Name)
+			break
+		}
+	}
+
+	return status
 }

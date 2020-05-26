@@ -2,7 +2,6 @@ package sonarqubeserver
 
 import (
 	"context"
-	"fmt"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -48,36 +47,14 @@ func TestSonarQubeServerPVC(t *testing.T) {
 	// Create a ReconcileSonarQubeServer object with the scheme and fake client.
 	r := &ReconcileSonarQubeServer{client: cl, scheme: s}
 
-	_, err := r.ReconcilePVCs(sonarqube)
-	if utils.ReasonForError(err) != utils.ErrorReasonSpecUpdate {
-		t.Error("reconcileDeployment: resource created error not thrown when creating Deployment")
-	}
-	_, err = r.ReconcilePVCs(sonarqube)
-	// Check the result of reconciliation to make sure it has the desired state.
+	_, err := r.ReconcilePVC(sonarqube)
 	if utils.ReasonForError(err) != utils.ErrorReasonResourceCreate {
 		t.Error("reconcileDeployment: resource created error not thrown when creating Deployment")
 	}
 	dataPVC := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", sonarqube.Name, "data"), Namespace: namespace}, dataPVC)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: sonarqube.Name, Namespace: namespace}, dataPVC)
 	if err != nil && errors.IsNotFound(err) {
-		t.Error("reconcile: data pvc not created")
-	} else if err != nil {
-		t.Fatalf(ReconcileErrorFormat, err)
-	}
-
-	_, err = r.ReconcilePVCs(sonarqube)
-	if utils.ReasonForError(err) != utils.ErrorReasonSpecUpdate {
-		t.Error("reconcileDeployment: resource created error not thrown when creating Deployment")
-	}
-
-	_, err = r.ReconcilePVCs(sonarqube)
-	if utils.ReasonForError(err) != utils.ErrorReasonResourceCreate {
-		t.Error("reconcileDeployment: resource created error not thrown when creating Deployment")
-	}
-	extensionsPVC := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-%s", sonarqube.Name, "extensions"), Namespace: namespace}, extensionsPVC)
-	if err != nil && errors.IsNotFound(err) {
-		t.Error("reconcile: extensions pvc not created")
+		t.Error("reconcile: storage pvc not created")
 	} else if err != nil {
 		t.Fatalf(ReconcileErrorFormat, err)
 	}

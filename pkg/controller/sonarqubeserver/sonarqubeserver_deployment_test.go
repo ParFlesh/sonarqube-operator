@@ -5,6 +5,7 @@ import (
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,7 +42,7 @@ func TestSonarQubeServerDeployment(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-				Type: sonarsourcev1alpha1.AIO,
+				Type: &[]sonarsourcev1alpha1.ServerType{sonarsourcev1alpha1.AIO}[0],
 			},
 		},
 		{
@@ -50,7 +51,7 @@ func TestSonarQubeServerDeployment(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-				Type: sonarsourcev1alpha1.Application,
+				Type: &[]sonarsourcev1alpha1.ServerType{sonarsourcev1alpha1.Application}[0],
 			},
 		},
 		{
@@ -59,7 +60,7 @@ func TestSonarQubeServerDeployment(t *testing.T) {
 				Namespace: namespace,
 			},
 			Spec: sonarsourcev1alpha1.SonarQubeServerSpec{
-				Type: sonarsourcev1alpha1.Search,
+				Type: &[]sonarsourcev1alpha1.ServerType{sonarsourcev1alpha1.Search}[0],
 			},
 		},
 	}
@@ -98,7 +99,7 @@ func TestSonarQubeServerDeployment(t *testing.T) {
 		}
 
 		for {
-			_, err := r.ReconcilePVCs(sonarqube)
+			_, err := r.ReconcilePVC(sonarqube)
 			if err != nil && utils.ReasonForError(err) == utils.ErrorReasonUnknown {
 				t.Fatalf("reconcileServiceAccount: (%v)", err)
 			} else if err == nil {
@@ -124,6 +125,15 @@ func TestSonarQubeServerDeployment(t *testing.T) {
 		if err != nil && errors.IsNotFound(err) {
 			t.Error("reconcileDeployment: Deployment not created")
 		} else if err != nil {
+			t.Fatalf("reconcileDeployment: (%v)", err)
+		}
+
+		deployment.Status.Conditions = append(deployment.Status.Conditions, appsv1.DeploymentCondition{
+			Type:   appsv1.DeploymentAvailable,
+			Status: corev1.ConditionTrue,
+		})
+		err = r.client.Status().Update(context.TODO(), deployment)
+		if err != nil {
 			t.Fatalf("reconcileDeployment: (%v)", err)
 		}
 

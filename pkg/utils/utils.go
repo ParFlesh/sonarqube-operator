@@ -2,6 +2,8 @@ package utils
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"github.com/magiconair/properties"
 	"github.com/operator-framework/operator-sdk/pkg/status"
@@ -18,6 +20,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
+)
+
+const (
+	DefaultImage = "sonarqube"
 )
 
 var log = logf.Log.WithName("controller_sonarqube")
@@ -128,40 +134,61 @@ func ParseErrorForReconcileResult(client client.Client, object interface{}, err 
 		sqErr := err.(*Error)
 		switch sqErr.Type() {
 		case ErrorReasonSpecUpdate, ErrorReasonResourceCreate, ErrorReasonResourceUpdate, ErrorReasonResourceWaiting:
+			*statusConditions = ClearConditions(*statusConditions)
+			var reason status.ConditionReason
+			switch sqErr.Type() {
+			case ErrorReasonSpecUpdate:
+				reason = sonarsourcev1alpha1.ConditionConfigured
+			case ErrorReasonResourceCreate:
+				reason = sonarsourcev1alpha1.ConditionResourcesCreating
+			case ErrorReasonResourceUpdate, ErrorReasonResourceWaiting:
+				reason = sonarsourcev1alpha1.ConditionReasourcesUpdating
+			}
 			statusConditions.SetCondition(status.Condition{
 				Type:    sonarsourcev1alpha1.ConditionProgressing,
 				Status:  corev1.ConditionTrue,
-				Reason:  sonarsourcev1alpha1.ConditionResourcesCreating,
+				Reason:  reason,
 				Message: sqErr.Error(),
 			})
-			if statusConditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
-				statusConditions.SetCondition(status.Condition{
-					Type:   sonarsourcev1alpha1.ConditionInvalid,
-					Status: corev1.ConditionFalse,
-				})
-			}
 			UpdateStatus(client, newStatus, object)
 			reqLogger.Info(sqErr.Error())
-			return reconcile.Result{Requeue: true}, nil
+			if sqErr.Type() == ErrorReasonResourceWaiting {
+				return reconcile.Result{}, nil
+			} else {
+				return reconcile.Result{Requeue: true}, nil
+			}
 		case ErrorReasonSpecInvalid, ErrorReasonResourceInvalid:
+			*statusConditions = ClearConditions(*statusConditions)
+			var reason status.ConditionReason
+			switch sqErr.Type() {
+			case ErrorReasonSpecInvalid:
+				reason = sonarsourcev1alpha1.ConditionSpecInvalid
+			case ErrorReasonResourceInvalid:
+				reason = sonarsourcev1alpha1.ConditionReasourcesInvalid
+			}
 			statusConditions.SetCondition(status.Condition{
 				Type:    sonarsourcev1alpha1.ConditionInvalid,
 				Status:  corev1.ConditionTrue,
-				Reason:  sonarsourcev1alpha1.ConditionSpecInvalid,
+				Reason:  reason,
 				Message: sqErr.Error(),
 			})
-			if statusConditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) {
-				statusConditions.SetCondition(status.Condition{
-					Type:   sonarsourcev1alpha1.ConditionProgressing,
-					Status: corev1.ConditionFalse,
-				})
-			}
+			UpdateStatus(client, newStatus, object)
+			reqLogger.Info(sqErr.Error())
+			return reconcile.Result{}, nil
+		case ErrorReasonResourceShutdown:
+			*statusConditions = ClearConditions(*statusConditions)
+			statusConditions.SetCondition(status.Condition{
+				Type:    sonarsourcev1alpha1.ConditionShutdown,
+				Status:  corev1.ConditionTrue,
+				Reason:  sonarsourcev1alpha1.ConditionConfigured,
+				Message: sqErr.Error(),
+			})
 			UpdateStatus(client, newStatus, object)
 			reqLogger.Info(sqErr.Error())
 			return reconcile.Result{}, nil
 		default:
 			reqLogger.Error(sqErr, "unhandled sonarqube error")
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, sqErr
 		}
 	}
 	return reconcile.Result{}, err
@@ -228,4 +255,36 @@ func (r *SecretMapper) Map(o handler.MapObject) []reconcile.Request {
 		}
 	}
 	return output
+}
+
+func GenVersion(spec interface{}, secret []byte) (string, error) {
+	toBeHashed, err := json.Marshal(spec)
+	if err != nil {
+		return "", err
+	}
+	toBeHashed = append(toBeHashed, secret...)
+
+	h := sha1.New()
+
+	h.Write(toBeHashed)
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func GetImage(edition, version *string) string {
+	var sqImage, sqEdition string
+
+	if edition != nil {
+		sqEdition = *edition
+	} else {
+		sqEdition = "community"
+	}
+
+	if version != nil {
+		sqImage = fmt.Sprintf("%s:%s-%s", DefaultImage, *version, sqEdition)
+	} else {
+		sqImage = fmt.Sprintf("%s:%s", DefaultImage, sqEdition)
+	}
+
+	return sqImage
 }

@@ -7,13 +7,14 @@ import (
 type ErrorType string
 
 const (
-	ErrorReasonSpecUpdate      ErrorType = "SpecUpdate"
-	ErrorReasonSpecInvalid     ErrorType = "SpecInvalid"
-	ErrorReasonResourceCreate  ErrorType = "ResourceCreate"
-	ErrorReasonResourceUpdate  ErrorType = "ResourceUpdate"
-	ErrorReasonResourceWaiting ErrorType = "ResourceWaiting"
-	ErrorReasonResourceInvalid ErrorType = "ResourceInvalid"
-	ErrorReasonUnknown         ErrorType = "Unknown"
+	ErrorReasonSpecUpdate       ErrorType = "SpecUpdate"
+	ErrorReasonSpecInvalid      ErrorType = "SpecInvalid"
+	ErrorReasonResourceCreate   ErrorType = "ResourceCreate"
+	ErrorReasonResourceUpdate   ErrorType = "ResourceUpdate"
+	ErrorReasonResourceWaiting  ErrorType = "ResourceWaiting"
+	ErrorReasonResourceInvalid  ErrorType = "ResourceInvalid"
+	ErrorReasonResourceShutdown ErrorType = "ResourceShutdown"
+	ErrorReasonUnknown          ErrorType = "Unknown"
 )
 
 type SQError interface {

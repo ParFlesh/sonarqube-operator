@@ -129,7 +129,7 @@ func (r *ReconcileSonarQubeServer) Reconcile(request reconcile.Request) (reconci
 
 	newStatus := instance.DeepCopy()
 	if newStatus.Status.Deployment == nil {
-		newStatus.Status.Deployment = make(sonarsourcev1alpha1.DeploymentStatus)
+		newStatus.Status.Deployment = make(sonarsourcev1alpha1.DeploymentStatuses)
 	}
 	utils.UpdateStatus(r.client, newStatus, instance)
 

@@ -10,6 +10,7 @@ import (
 
 func ServicePorts(serverType sonarsourcev1alpha1.ServerType) []corev1.ServicePort {
 	var servicePorts []corev1.ServicePort
+
 	switch serverType {
 	case sonarsourcev1alpha1.AIO, "":
 		servicePorts = []corev1.ServicePort{

@@ -74,12 +74,12 @@ func (r *ReconcileSonarQubeServer) newSecret(cr *sonarsourcev1alpha1.SonarQubeSe
 		Type: corev1.SecretTypeOpaque,
 	}
 
-	if cr.Spec.Secret == "" {
-		cr.Spec.Secret = fmt.Sprintf("%s-config", cr.Name)
+	if cr.Spec.Secret == nil {
+		cr.Spec.Secret = &[]string{fmt.Sprintf("%s-config", cr.Name)}[0]
 		return dep, utils.UpdateResource(r.client, cr, utils.ErrorReasonSpecUpdate, "updated secret")
 	}
 
-	dep.Name = cr.Spec.Secret
+	dep.Name = *cr.Spec.Secret
 
 	if err := controllerutil.SetControllerReference(cr, dep, r.scheme); err != nil {
 		return dep, err
@@ -96,7 +96,14 @@ func (r *ReconcileSonarQubeServer) verifySecret(cr *sonarsourcev1alpha1.SonarQub
 		sonarProperties, _ = properties.Load(v, properties.UTF8)
 	}*/
 
-	switch cr.Spec.Type {
+	var nodeType sonarsourcev1alpha1.ServerType
+	if cr.Spec.Type == nil {
+		nodeType = sonarsourcev1alpha1.AIO
+	} else {
+		nodeType = *cr.Spec.Type
+	}
+
+	switch nodeType {
 	case sonarsourcev1alpha1.Application, sonarsourcev1alpha1.Search:
 	}
 

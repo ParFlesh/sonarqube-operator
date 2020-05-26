@@ -46,8 +46,10 @@ func (r *ReconcileSonarQubeServer) newServiceAccount(cr *sonarsourcev1alpha1.Son
 		},
 	}
 
-	if cr.Spec.Deployment.ServiceAccount != "" {
-		dep.Name = cr.Spec.Deployment.ServiceAccount
+	if cr.Spec.ServiceAccount != nil {
+		dep.Name = *cr.Spec.ServiceAccount
+	} else {
+		dep.Name = cr.Name
 	}
 
 	if err := controllerutil.SetControllerReference(cr, dep, r.scheme); err != nil {

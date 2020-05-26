@@ -2,40 +2,49 @@ package v1alpha1
 
 import (
 	"github.com/operator-framework/operator-sdk/pkg/status"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // SonarQubeServerSpec defines the desired state of SonarQubeServer
 type SonarQubeServerSpec struct {
-	// 0 and 1 are the only valid options.  Used to start and stop server.
+	// Shutdown SonarQube server
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Size"
-	// +kubebuilder:validation:Default=1
-	Size int32 `json:"size,omitempty"`
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Shutdown"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch"
+	Shutdown *bool `json:"shutdown,omitempty"`
 
-	// Version of SonarQube image to deploy
+	// if empty operator will start latest version of selected edition then lock the version
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Version"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text"
-	// +kubebuilder:validation:Default=latest
-	Version string `json:"version,omitempty"`
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:advanced"
+	Version *string `json:"version,omitempty"`
 
-	// Image of SonarQube to deploy
+	// community, developer, or enterprise (default is community)
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Image"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Edition"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:advanced"
-	// +kubebuilder:validation:Default=sonarqube
-	Image string `json:"image,omitempty"`
+	// +kubebuilder:validation:Enum=community;developer;enterprise
+	Edition *string `json:"edition,omitempty"`
 
-	// Secret with sonar configuration files (sonar.properties).
+	// Automatically apply minor version updates
+	// +optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Minor"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:checkbox,urn:alm:descriptor:com.tectonic.ui:advanced,urn:alm:descriptor:com.tectonic.ui:fieldGroup:updates"
+	UpdatesMinor *bool `json:"updatesMinor,omitempty"`
+
+	// Automatically apply major version updates
+	// +optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Major"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:checkbox,urn:alm:descriptor:com.tectonic.ui:advanced,urn:alm:descriptor:com.tectonic.ui:fieldGroup:updates"
+	UpdatesMajor *bool `json:"updatesMajor,omitempty"`
+
+	// Secret with sonar configuration files (sonar.properties, wrapper.properties).
 	// Don't add cluster properties to configuration files as this could cause unexpected results
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
@@ -43,50 +52,49 @@ type SonarQubeServerSpec struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Secret"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:Secret"
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:Secret"
-	Secret string `json:"secret,omitempty"`
+	Secret *string `json:"secret,omitempty"`
 
 	// Sonar Node Type application or search when clustering is enabled otherwise aio (all-in-one)
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Secret"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Server Type"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:select:aio,urn:alm:descriptor:com.tectonic.ui:select:application,urn:alm:descriptor:com.tectonic.ui:select:search"
-	// +kubebuilder:validation:Default=aio
 	// +kubebuilder:validation:Enum=aio;application;search
-	Type ServerType `json:"type,omitempty"`
+	Type *ServerType `json:"type,omitempty"`
 
 	// SonarQube application hosts list
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Hosts"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch,urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:hosts,urn:alm:descriptor:com.tectonic.ui:advanced"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:hosts,urn:alm:descriptor:com.tectonic.ui:advanced"
 	Hosts []string `json:"hosts,omitempty"`
 
 	// SonarQube search hosts list
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Search Hosts"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:booleanSwitch,urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:searchHosts,urn:alm:descriptor:com.tectonic.ui:advanced"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:arrayFieldGroup:searchHosts,urn:alm:descriptor:com.tectonic.ui:advanced"
 	SearchHosts []string `json:"searchHosts,omitempty"`
 
-	// Deployment
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
-	Deployment Deployment `json:"deployment,omitempty"`
+	// Service Account
+	// +optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Service Account"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ServiceAccount *string `json:"serviceAccount,omitempty"`
 
-	// Storage
+	// Node Configuration
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
-	Storage Storage `json:"storage,omitempty"`
+	NodeConfig NodeConfig `json:"nodeConfig,omitempty"`
 }
 
-type Cluster struct {
-}
-
-type Deployment struct {
+type NodeConfig struct {
 	// Node selector
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Node Selector"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:selector:Node,urn:alm:descriptor:com.tectonic.ui:advanced"
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	NodeSelector *map[string]string `json:"nodeSelector,omitempty"`
 
 	// Node Affinity
 	// +optional
@@ -114,54 +122,28 @@ type Deployment struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Priority Class"
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:advanced"
-	PriorityClass string `json:"priorityClass,omitempty"`
+	PriorityClass *string `json:"priorityClass,omitempty"`
 
 	// Resource requirements
 	// +optional
-	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Priority Class"
-	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements,urn:alm:descriptor:com.tectonic.ui:advanced"
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Resources"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:resourceRequirements,urn:alm:descriptor:com.tectonic.ui:advanced"
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// Service Account for running pods
-	// +optional
-	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Service Account Name"
-	//	+operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:selector:ServiceAccount,urn:alm:descriptor:com.tectonic.ui:advanced"
-	// +kubebuilder:validation:Default=default
-	ServiceAccount string `json:"serviceAccount,omitempty"`
-}
-
-type Storage struct {
-	// Data Volume Size
+	// Storage class
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Data Volume Size"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage"
-	// +kubebuilder:validation:Default=1Gi
-	DataSize string `json:"dataSize,omitempty"`
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Storage Class"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:StorageClass"
+	StorageClass *string `json:"storageClass,omitempty"`
 
-	// Storage Class Name
+	// Size of Storage (ex 1Gi)
 	// +optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Data Storage Class Name"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:StorageClass,urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage"
-	DataClass *string `json:"dataClass,omitempty"`
-
-	// Extensions Volume Size
-	// +optional
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Extensions Volume Size"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text,urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage"
-	// +kubebuilder:validation:Default=1Gi
-	ExtensionsSize string `json:"extensionsSize,omitempty"`
-
-	// Storage Class Name
-	// +optional
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Extensions Storage Class Name"
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:StorageClass,urn:alm:descriptor:com.tectonic.ui:fieldGroup:storage"
-	ExtensionsClass *string `json:"extensionsClass,omitempty"`
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="Storage Size"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	StorageSize *string `json:"storageSize,omitempty"`
 }
 
 // SonarQubeServerStatus defines the observed state of SonarQubeServer
@@ -180,25 +162,21 @@ type SonarQubeServerStatus struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.displayName="Pod Statuses"
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:podStatuses"
-	// +kubebuilder:validation:Default={Available:[],Progressing:[],ReplicaFailure:[]}
-	Deployment DeploymentStatus `json:"deployment"`
-
-	// Expected revision for resources
-	// Incremented when there is a change to spec or controller version
-	// +kubebuilder:validation:Default=0
-	Revision int32 `json:"revision,omitempty"`
+	Deployment DeploymentStatuses `json:"deployment,omitempty"`
 
 	// Hash of latest spec & controller version for revision tracking
-	RevisionHash string `json:"revisionHash,omitempty"`
+	Revision string `json:"revision,omitempty"`
 }
-
-type DeploymentStatus map[appsv1.DeploymentConditionType][]string
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SonarQubeServer is the Schema for the sonarqubeservers API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=sonarqubeservers,scope=Namespaced
+// +operator-sdk:gen-csv:customresourcedefinitions.displayName="SonarQube Server"
+// +operator-sdk:gen-csv:customresourcedefinitions.resources="Service,v1,\"\""
+// +operator-sdk:gen-csv:customresourcedefinitions.resources="Secret,v1,\"\""
+// +operator-sdk:gen-csv:customresourcedefinitions.resources="Deployment,v1,\"\""
 type SonarQubeServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

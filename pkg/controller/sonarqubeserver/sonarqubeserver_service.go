@@ -52,6 +52,13 @@ func (r *ReconcileSonarQubeServer) findService(cr *sonarsourcev1alpha1.SonarQube
 func (r *ReconcileSonarQubeServer) newService(cr *sonarsourcev1alpha1.SonarQubeServer) (*corev1.Service, error) {
 	labels := r.Labels(cr)
 
+	var nodeType sonarsourcev1alpha1.ServerType
+	if cr.Spec.Type == nil {
+		nodeType = sonarsourcev1alpha1.AIO
+	} else {
+		nodeType = *cr.Spec.Type
+	}
+
 	dep := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: cr.Namespace,
@@ -61,7 +68,7 @@ func (r *ReconcileSonarQubeServer) newService(cr *sonarsourcev1alpha1.SonarQubeS
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Type:     corev1.ServiceTypeClusterIP,
-			Ports:    utils.ServicePorts(cr.Spec.Type),
+			Ports:    utils.ServicePorts(nodeType),
 		},
 	}
 
