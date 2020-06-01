@@ -13,6 +13,8 @@ const (
 	ConditionProgressing status.ConditionType = "Progressing"
 	// ConditionShutdown means that the resources have been shutdown.
 	ConditionShutdown status.ConditionType = "Shutdown"
+	// ConditionUnavailable means that the application is not available.
+	ConditionUnavailable status.ConditionType = "Unavailable"
 )
 
 // Condition Reasons

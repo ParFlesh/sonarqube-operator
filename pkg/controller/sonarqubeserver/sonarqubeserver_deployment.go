@@ -51,17 +51,17 @@ func (r *ReconcileSonarQubeServer) ReconcileDeployment(cr *sonarsourcev1alpha1.S
 		}
 	}
 
-	if deployment.Status.Replicas > 0 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentAvailable]) < 1 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentReady]) < 1 {
-		return deployment, &utils.Error{
-			Reason:  utils.ErrorReasonResourceWaiting,
-			Message: "waiting for deployment to be available and not progressing",
-		}
-	}
-
 	if deployment.Status.Replicas > 0 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentReady]) < 1 {
 		return deployment, &utils.Error{
 			Reason:  utils.ErrorReasonResourceWaiting,
 			Message: "waiting for deployment to be ready",
+		}
+	}
+
+	if deployment.Status.Replicas > 0 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentAvailable]) < 1 && len(newStatus.Status.Deployment[sonarsourcev1alpha1.DeploymentReady]) < 1 {
+		return deployment, &utils.Error{
+			Reason:  utils.ErrorReasonResourceWaiting,
+			Message: "waiting for deployment to be available and not progressing",
 		}
 	}
 

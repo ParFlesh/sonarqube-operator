@@ -2,6 +2,7 @@ package sonarqubeserver
 
 import (
 	"context"
+	"github.com/parflesh/sonarqube-operator/pkg/api_client"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
@@ -77,7 +78,8 @@ func TestSonarQubeServerDeployment(t *testing.T) {
 		// Create a fake client to mock API calls.
 		cl := fake.NewFakeClientWithScheme(s, objs...)
 		// Create a ReconcileSonarQubeServer object with the scheme and fake client.
-		r := &ReconcileSonarQubeServer{client: cl, scheme: s}
+		apiMock := &api_client.APIClientMock{}
+		r := &ReconcileSonarQubeServer{client: cl, scheme: s, apiClient: apiMock}
 
 		// Take care of dependencies, if there is an unkown error here there is not much to do
 		for {

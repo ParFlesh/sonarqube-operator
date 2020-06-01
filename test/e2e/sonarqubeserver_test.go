@@ -6,6 +6,7 @@ import (
 	"github.com/parflesh/sonarqube-operator/pkg/apis"
 	operator "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"strings"
 	"testing"
 
@@ -66,7 +67,24 @@ func sonarqubeserverDeployTest(t *testing.T, f *framework.Framework, ctx *framew
 	}
 
 	// wait for sonarqubeserver to reach 1 replica
-	return e2eutil.WaitForDeployment(t, f.KubeClient, namespace, name, 1, retryInterval, timeout)
+	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, name, 1, retryInterval, timeout)
+	if err != nil {
+		return err
+	}
+
+	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, sonarQubeServer)
+		if err != nil {
+			return false, err
+		}
+
+		if sonarQubeServer.Status.Conditions.IsFalseFor(operator.ConditionProgressing) {
+			return true, nil
+		}
+		t.Logf("Waiting for full availability of %s sonarqube server (Progressing=>%s)\n", name,
+			sonarQubeServer.Status.Conditions.GetCondition(operator.ConditionProgressing).Reason)
+		return false, nil
+	})
 }
 
 func SonarQubeServer(t *testing.T) {

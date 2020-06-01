@@ -112,7 +112,7 @@ func (r *ReconcileSonarQube) verifySonarQubeServers(cr *sonarsourcev1alpha1.Sona
 
 	for t, l := range s {
 		for _, v := range l {
-			if !v.Status.Conditions.IsFalseFor(sonarsourcev1alpha1.ConditionProgressing) && !v.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
+			if v.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionProgressing) && !v.Status.Conditions.IsTrueFor(sonarsourcev1alpha1.ConditionInvalid) {
 				return &utils.Error{
 					Reason:  utils.ErrorReasonResourceWaiting,
 					Message: fmt.Sprintf("waiting for %s node %s to finish startup", t, v.Name),

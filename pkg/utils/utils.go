@@ -20,6 +20,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
+	"time"
 )
 
 const (
@@ -100,6 +101,12 @@ func CreateResourceIfNotFound(client client.Client, object, output runtime.Objec
 func ClearConditions(conditions status.Conditions) status.Conditions {
 	var cList []status.ConditionType
 	for _, c := range conditions {
+		// Filter out excluded condition types
+		for _, e := range []status.ConditionType{sonarsourcev1alpha1.ConditionUnavailable} {
+			if e == c.Type {
+				break
+			}
+		}
 		cList = append(cList, c.Type)
 	}
 
@@ -133,7 +140,7 @@ func ParseErrorForReconcileResult(client client.Client, object interface{}, err 
 	if err != nil && ReasonForError(err) != ErrorReasonUnknown {
 		sqErr := err.(*Error)
 		switch sqErr.Type() {
-		case ErrorReasonSpecUpdate, ErrorReasonResourceCreate, ErrorReasonResourceUpdate, ErrorReasonResourceWaiting:
+		case ErrorReasonSpecUpdate, ErrorReasonResourceCreate, ErrorReasonResourceUpdate, ErrorReasonResourceWaiting, ErrorReasonServerWaiting:
 			*statusConditions = ClearConditions(*statusConditions)
 			var reason status.ConditionReason
 			switch sqErr.Type() {
@@ -152,9 +159,10 @@ func ParseErrorForReconcileResult(client client.Client, object interface{}, err 
 			})
 			UpdateStatus(client, newStatus, object)
 			reqLogger.Info(sqErr.Error())
-			if sqErr.Type() == ErrorReasonResourceWaiting {
-				return reconcile.Result{}, nil
-			} else {
+			switch sqErr.Type() {
+			case ErrorReasonServerWaiting, ErrorReasonResourceWaiting:
+				return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
+			default:
 				return reconcile.Result{Requeue: true}, nil
 			}
 		case ErrorReasonSpecInvalid, ErrorReasonResourceInvalid:

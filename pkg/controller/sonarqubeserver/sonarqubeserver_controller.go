@@ -2,6 +2,7 @@ package sonarqubeserver
 
 import (
 	"context"
+	"github.com/parflesh/sonarqube-operator/pkg/api_client"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,7 +33,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSonarQubeServer{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileSonarQubeServer{
+		client:    mgr.GetClient(),
+		scheme:    mgr.GetScheme(),
+		apiClient: &api_client.APIClient{},
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -103,8 +108,9 @@ var _ reconcile.Reconciler = &ReconcileSonarQubeServer{}
 type ReconcileSonarQubeServer struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client    client.Client
+	scheme    *runtime.Scheme
+	apiClient api_client.APIProvider
 }
 
 // Reconcile reads that state of the cluster for a SonarQubeServer object and makes changes based on the state read
@@ -151,6 +157,13 @@ func (r *ReconcileSonarQubeServer) Reconcile(request reconcile.Request) (reconci
 	_, err = r.ReconcileDeployment(instance)
 	if err != nil {
 		return utils.ParseErrorForReconcileResult(r.client, instance, err)
+	}
+
+	if instance.Spec.Shutdown == nil || !*instance.Spec.Shutdown {
+		err = r.ReconcileServer(instance)
+		if err != nil {
+			return utils.ParseErrorForReconcileResult(r.client, instance, err)
+		}
 	}
 
 	newStatus = instance.DeepCopy()

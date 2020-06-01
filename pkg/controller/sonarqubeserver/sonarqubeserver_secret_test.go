@@ -3,6 +3,7 @@ package sonarqubeserver
 import (
 	"context"
 	"fmt"
+	"github.com/parflesh/sonarqube-operator/pkg/api_client"
 	sonarsourcev1alpha1 "github.com/parflesh/sonarqube-operator/pkg/apis/sonarsource/v1alpha1"
 	"github.com/parflesh/sonarqube-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,8 @@ func TestSonarQubeServerSecret(t *testing.T) {
 	// Create a fake client to mock API calls.
 	cl := fake.NewFakeClientWithScheme(s, objs...)
 	// Create a ReconcileSonarQubeServer object with the scheme and fake client.
-	r := &ReconcileSonarQubeServer{client: cl, scheme: s}
+	apiMock := &api_client.APIClientMock{}
+	r := &ReconcileSonarQubeServer{client: cl, scheme: s, apiClient: apiMock}
 
 	_, err := r.ReconcileSecret(sonarqube)
 	if utils.ReasonForError(err) != utils.ErrorReasonSpecUpdate {
@@ -125,7 +127,8 @@ func TestSonarQubeServerSecretUnowned(t *testing.T) {
 	// Create a fake client to mock API calls.
 	cl := fake.NewFakeClientWithScheme(s, objs...)
 	// Create a ReconcileSonarQubeServer object with the scheme and fake client.
-	r := &ReconcileSonarQubeServer{client: cl, scheme: s}
+	apiMock := &api_client.APIClientMock{}
+	r := &ReconcileSonarQubeServer{client: cl, scheme: s, apiClient: apiMock}
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
