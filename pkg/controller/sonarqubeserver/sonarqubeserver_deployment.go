@@ -233,7 +233,7 @@ func (r *ReconcileSonarQubeServer) newDeployment(cr *sonarsourcev1alpha1.SonarQu
 					},
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					TerminationGracePeriodSeconds: &[]int64{PodGracePeriod}[0],
-					DNSPolicy:                     corev1.DNSDefault,
+					DNSPolicy:                     corev1.DNSClusterFirst,
 					ServiceAccountName:            serviceAccount.Name,
 					Affinity: &corev1.Affinity{
 						NodeAffinity:    cr.Spec.NodeConfig.NodeAffinity,

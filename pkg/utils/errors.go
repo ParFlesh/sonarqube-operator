@@ -15,6 +15,7 @@ const (
 	ErrorReasonResourceInvalid  ErrorType = "ResourceInvalid"
 	ErrorReasonResourceShutdown ErrorType = "ResourceShutdown"
 	ErrorReasonServerWaiting    ErrorType = "ServerWaiting"
+	ErrorReasonServerDown       ErrorType = "ServerDown"
 	ErrorReasonUnknown          ErrorType = "Unknown"
 )
 

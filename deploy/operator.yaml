@@ -15,7 +15,7 @@ spec:
       serviceAccountName: sonarqube-operator
       containers:
         - name: sonarqube-operator
-          image: quay.io/parflesh/sonarqube-operator:0.0.1
+          image: quay.io/parflesh/sonarqube-operator:0.0.6
           command:
           - sonarqube-operator
           imagePullPolicy: Always

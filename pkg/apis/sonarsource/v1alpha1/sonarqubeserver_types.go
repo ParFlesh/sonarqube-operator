@@ -83,6 +83,13 @@ type SonarQubeServerSpec struct {
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ServiceAccount *string `json:"serviceAccount,omitempty"`
 
+	// External base URL
+	// +optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.displayName="External URL"
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	ExternalURL *string `json:"externalURL,omitempty"`
+
 	// Node Configuration
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=false
 	NodeConfig NodeConfig `json:"nodeConfig,omitempty"`
@@ -166,6 +173,19 @@ type SonarQubeServerStatus struct {
 
 	// Hash of latest spec & controller version for revision tracking
 	Revision string `json:"revision,omitempty"`
+
+	// Current observed version of SonarQube
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.displayName="Observed Version"
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors.x-descriptors="urn:alm:descriptor:com.tectonic.ui:text"
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=false
+	ObservedVersion string `json:"observedVersion,omitempty"`
+
+	Upgrades Upgrades `json:"upgrades,omitempty"`
+}
+
+type Upgrades struct {
+	Compatible   []string `json:"compatible,omitempty"`
+	Incompatible []string `json:"incompatible,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

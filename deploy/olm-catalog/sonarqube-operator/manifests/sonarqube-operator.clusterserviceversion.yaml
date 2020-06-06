@@ -22,7 +22,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-  name: sonarqube-operator.v0.0.1
+  name: sonarqube-operator.v0.0.6
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -205,6 +205,11 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: External base URL
+        displayName: External URL
+        path: externalURL
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: SonarQube application hosts list
         displayName: Hosts
         path: hosts
@@ -359,7 +364,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: sonarqube-operator
-                image: quay.io/parflesh/sonarqube-operator:0.0.1
+                image: quay.io/parflesh/sonarqube-operator:0.0.6
                 imagePullPolicy: Always
                 name: sonarqube-operator
                 resources: {}
@@ -460,4 +465,5 @@ spec:
   maturity: alpha
   provider:
     name: ParFlesh
-  version: 0.0.1
+  replaces: sonarqube-operator.v0.0.5
+  version: 0.0.6

@@ -1,6 +1,7 @@
 package api_client
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -14,6 +15,8 @@ type APIProvider interface {
 
 type APIReader interface {
 	Ping() error
+	Status() (*Status, error)
+	Upgrades() (*Upgrades, error)
 }
 
 type APIClient struct {
@@ -59,6 +62,56 @@ func (r *APIClient) Ping() error {
 	}
 
 	return nil
+}
+
+func (r *APIClient) Status() (*Status, error) {
+	output := &Status{}
+	res, err := r.get("system", "status")
+	if err != nil {
+		return output, err
+	}
+	if res.StatusCode != 200 {
+		return output, fmt.Errorf("non 200 error code returned")
+	}
+
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return output, err
+	}
+
+	err = json.Unmarshal(body, output)
+	if err != nil {
+		return output, err
+	}
+
+	return output, nil
+}
+
+func (r *APIClient) Upgrades() (*Upgrades, error) {
+	output := &Upgrades{}
+	res, err := r.get("system", "upgrades")
+	if err != nil {
+		return output, err
+	}
+	if res.StatusCode != 200 {
+		return output, fmt.Errorf("non 200 error code returned")
+	}
+
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return output, err
+	}
+
+	err = json.Unmarshal(body, output)
+	if err != nil {
+		return output, err
+	}
+
+	return output, nil
 }
 
 func (r *APIClient) get(domain, object string) (*http.Response, error) {

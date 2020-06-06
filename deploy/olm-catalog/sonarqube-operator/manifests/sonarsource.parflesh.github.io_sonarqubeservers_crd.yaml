@@ -38,6 +38,9 @@ spec:
               - developer
               - enterprise
               type: string
+            externalURL:
+              description: External base URL
+              type: string
             hosts:
               description: SonarQube application hosts list
               items:
@@ -738,12 +741,26 @@ spec:
                 type: array
               description: Status of pods
               type: object
+            observedVersion:
+              description: Current observed version of SonarQube
+              type: string
             revision:
               description: Hash of latest spec & controller version for revision tracking
               type: string
             service:
               description: Kubernetes service that can be used to expose SonarQubeServer
               type: string
+            upgrades:
+              properties:
+                compatible:
+                  items:
+                    type: string
+                  type: array
+                incompatible:
+                  items:
+                    type: string
+                  type: array
+              type: object
           type: object
       type: object
   version: v1alpha1

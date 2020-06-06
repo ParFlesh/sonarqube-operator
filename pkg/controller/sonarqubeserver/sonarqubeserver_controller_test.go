@@ -55,6 +55,12 @@ func TestSonarQubeServerController(t *testing.T) {
 	// Create a ReconcileSonarQubeServer object with the scheme and fake client.
 	apiMock := &api_client.APIClientMock{}
 	r := &ReconcileSonarQubeServer{client: cl, scheme: s, apiClient: apiMock}
+	apiMock.InfoOutput = &api_client.Status{
+		Version: api_client.SystemVersion{
+			Major: 8,
+			Minor: 3,
+		},
+	}
 
 	// Mock request to simulate Reconcile() being called on an event for a
 	// watched resource .
@@ -196,6 +202,27 @@ func TestSonarQubeServerController(t *testing.T) {
 	err = r.client.Status().Update(context.TODO(), deployment)
 	if err != nil {
 		t.Fatalf("reconcileDeployment: (%v)", err)
+	}
+
+	res, err = r.Reconcile(req)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	// Check the result of reconciliation to make sure it has the desired state.
+	if !res.Requeue {
+		t.Error("reconcile did not requeue to set version")
+	}
+	err = r.client.Get(context.TODO(), req.NamespacedName, sonarqube)
+	if err != nil {
+		t.Fatalf(ReconcileErrorFormat, err)
+	}
+	if sonarqube.Spec.Version == nil {
+		t.Error("sonarqube version not set")
+	}
+
+	apiMock.UpgradesOutput = &api_client.Upgrades{
+		Upgrades:            []api_client.Upgrade{},
+		UpdateCenterRefresh: "",
 	}
 
 	res, err = r.Reconcile(req)

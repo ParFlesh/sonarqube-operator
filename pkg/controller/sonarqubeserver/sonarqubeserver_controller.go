@@ -159,7 +159,7 @@ func (r *ReconcileSonarQubeServer) Reconcile(request reconcile.Request) (reconci
 		return utils.ParseErrorForReconcileResult(r.client, instance, err)
 	}
 
-	if instance.Spec.Shutdown == nil || !*instance.Spec.Shutdown {
+	if (instance.Spec.Shutdown == nil || !*instance.Spec.Shutdown) && (instance.Spec.Type == nil || *instance.Spec.Type != sonarsourcev1alpha1.Search) {
 		err = r.ReconcileServer(instance)
 		if err != nil {
 			return utils.ParseErrorForReconcileResult(r.client, instance, err)

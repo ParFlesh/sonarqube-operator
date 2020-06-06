@@ -82,7 +82,7 @@ func sonarqubeserverDeployTest(t *testing.T, f *framework.Framework, ctx *framew
 			return true, nil
 		}
 		t.Logf("Waiting for full availability of %s sonarqube server (Progressing=>%s)\n", name,
-			sonarQubeServer.Status.Conditions.GetCondition(operator.ConditionProgressing).Reason)
+			sonarQubeServer.Status.Conditions.GetCondition(operator.ConditionProgressing).Message)
 		return false, nil
 	})
 }
